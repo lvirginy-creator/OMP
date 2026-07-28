@@ -1,0 +1,15 @@
+<tr id="mapping-row-{{ mapping.id }}" {% if not mapping.active %}style="opacity:.55"{% endif %}>
+  <td>{{ supplier_name or "— (global)" }}</td>
+  <td>{{ mapping.supplier_ref }}</td>
+  <td>{{ mapping.supplier_label or "" }}</td>
+  <td>{{ mapping.our_ref }}</td>
+  <td>{{ mapping.our_label }}</td>
+  <td>{{ mapping.ean or "" }}</td>
+  <td>{% if mapping.active %}<span class="badge badge-validated">Actif</span>{% else %}<span class="badge">Inactif</span>{% endif %}</td>
+  <td>
+    <button class="secondary" hx-get="/referentiel/{{ mapping.id }}/edit-form" hx-target="#mapping-row-{{ mapping.id }}" hx-swap="outerHTML">Modifier</button>
+    <button class="contrast" hx-post="/referentiel/{{ mapping.id }}/toggle" hx-target="#mapping-row-{{ mapping.id }}" hx-swap="outerHTML">
+      {% if mapping.active %}Désactiver{% else %}Activer{% endif %}
+    </button>
+  </td>
+</tr>

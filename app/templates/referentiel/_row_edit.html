@@ -1,0 +1,17 @@
+<tr id="mapping-row-{{ mapping.id }}">
+  <td>{{ supplier_name or "— (global)" }}</td>
+  <td>{{ mapping.supplier_ref }}</td>
+  <td>{{ mapping.supplier_label or "" }}</td>
+  <td><input type="text" name="our_ref" value="{{ mapping.our_ref }}"></td>
+  <td><input type="text" name="our_label" value="{{ mapping.our_label }}"></td>
+  <td><input type="text" name="ean" value="{{ mapping.ean or '' }}"></td>
+  <td>{% if mapping.active %}<span class="badge badge-validated">Actif</span>{% else %}<span class="badge">Inactif</span>{% endif %}</td>
+  <td>
+    <button type="button"
+      hx-post="/referentiel/{{ mapping.id }}/edit"
+      hx-include="closest tr"
+      hx-target="#mapping-row-{{ mapping.id }}"
+      hx-swap="outerHTML">Enregistrer</button>
+    <button type="button" class="secondary" hx-get="/referentiel/{{ mapping.id }}/row" hx-target="#mapping-row-{{ mapping.id }}" hx-swap="outerHTML">Annuler</button>
+  </td>
+</tr>

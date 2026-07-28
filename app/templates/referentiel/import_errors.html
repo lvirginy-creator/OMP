@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Import référentiel — Suivi des achats{% endblock %}
+{% block content %}
+<h1>Import impossible</h1>
+<div class="anomaly-banner">
+  <ul>
+    {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+  </ul>
+</div>
+<a role="button" href="/referentiel">Retour au référentiel</a>
+{% endblock %}

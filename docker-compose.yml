@@ -1,0 +1,9 @@
+services:
+  achats:
+    build: .
+    restart: unless-stopped
+    ports: ["8000:8000"]
+    volumes: ["./data:/data"]
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      TZ: Europe/Paris

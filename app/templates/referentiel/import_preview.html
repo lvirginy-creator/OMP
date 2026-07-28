@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Import référentiel — Suivi des achats{% endblock %}
+{% block content %}
+<h1>Compte rendu de l'import</h1>
+<p>
+  <strong>{{ counts.create }}</strong> création(s) —
+  <strong>{{ counts.update }}</strong> mise(s) à jour —
+  <strong>{{ counts.ignore }}</strong> ligne(s) ignorée(s)
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ligne</th>
+      <th>Fournisseur</th>
+      <th>Réf. fournisseur</th>
+      <th>Action</th>
+      <th>Détail</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for o in outcomes %}
+    <tr>
+      <td>{{ o.row_number }}</td>
+      <td>{{ o.supplier_name or "— (global)" }}</td>
+      <td>{{ o.supplier_ref }}</td>
+      <td>
+        {% if o.action == "create" %}<span class="badge badge-validated">Création</span>
+        {% elif o.action == "update" %}<span class="badge badge-review">Mise à jour</span>
+        {% else %}<span class="badge">Ignorée</span>{% endif %}
+      </td>
+      <td>
+        {% if o.action == "update" %}
+          {{ o.old_our_ref }} / {{ o.old_our_label }}{% if o.old_ean %} / {{ o.old_ean }}{% endif %}
+          &rarr; {{ o.our_ref }} / {{ o.our_label }}
+        {% elif o.action == "create" %}
+          {{ o.our_ref }} / {{ o.our_label }}
+        {% else %}
+          {{ o.reason }}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="/referentiel/import/apply" style="display:inline">
+  <input type="hidden" name="token" value="{{ token }}">
+  <button type="submit">Appliquer</button>
+</form>
+<form method="post" action="/referentiel/import/cancel" style="display:inline">
+  <input type="hidden" name="token" value="{{ token }}">
+  <button type="submit" class="secondary">Annuler</button>
+</form>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Référentiel — Suivi des achats{% endblock %}
+{% block content %}
+<h1>Référentiel des correspondances</h1>
+
+<div class="grid">
+  <form method="get" action="/referentiel" role="search">
+    <fieldset role="group">
+      <input type="search" name="q" placeholder="Rechercher (référence, libellé, fournisseur, EAN)…" value="{{ q }}">
+      <button type="submit">Rechercher</button>
+    </fieldset>
+  </form>
+  <div>
+    <a role="button" class="secondary" href="/referentiel/modele">Télécharger le modèle</a>
+    <a role="button" class="secondary" href="/referentiel/export">Exporter le référentiel</a>
+  </div>
+</div>
+
+<details>
+  <summary role="button" class="outline">Importer un Excel</summary>
+  <form method="post" action="/referentiel/import/preview" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".xlsx" required>
+    <button type="submit">Analyser le fichier</button>
+  </form>
+</details>
+
+<table>
+  <thead>
+    <tr>
+      <th>Fournisseur</th>
+      <th>Référence fournisseur</th>
+      <th>Libellé fournisseur</th>
+      <th>Notre référence</th>
+      <th>Notre libellé</th>
+      <th>Code-barre</th>
+      <th>Statut</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="mapping-rows">
+    {% for mapping, supplier_name in rows %}
+      {% include "referentiel/_row.html" %}
+    {% else %}
+      <tr><td colspan="8">Aucune correspondance enregistrée pour l'instant.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

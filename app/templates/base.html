@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Suivi des achats{% endblock %}</title>
+  <link rel="stylesheet" href="/static/vendor/pico.min.css">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <style>
+    .badge { display:inline-block; padding:.15rem .5rem; border-radius:999px; font-size:.8rem; }
+    .badge-review { background:#fff3cd; color:#7a5b00; }
+    .badge-validated { background:#d4edda; color:#1e6b32; }
+    .anomaly-banner { background:#f8d7da; color:#7a1a1a; padding:.75rem 1rem; border-radius:.5rem; margin-bottom:1rem; }
+    .low-confidence { border-left: 3px solid #e08600; }
+    .yellow-row { background:#fff9d6; }
+  </style>
+</head>
+<body>
+  <nav class="container-fluid">
+    <ul>
+      <li><strong>Suivi des achats</strong></li>
+    </ul>
+    <ul>
+      <li><a href="/">Accueil</a></li>
+      <li><a href="/factures">Factures</a></li>
+      <li><a href="/a-mapper">Références à mapper</a></li>
+      <li><a href="/referentiel">Référentiel</a></li>
+      <li><a href="/export">Export</a></li>
+      <li><a href="/journal">Journal</a></li>
+    </ul>
+  </nav>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
