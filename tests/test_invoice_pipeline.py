@@ -152,6 +152,29 @@ async def test_unreliable_text_result_escalates_to_vision_max_two_calls(db_sessi
     assert calls == {"text": 1, "vision": 1}
 
 
+async def test_pathological_pdf_never_exceeds_two_llm_calls(db_session, monkeypatch):
+    """Même si le résultat MODE B est lui aussi non fiable, aucune 3e tentative n'est faite."""
+    calls = {"text": 0, "vision": 0}
+
+    async def fake_extract_text_mode(text_payload):
+        calls["text"] += 1
+        return _clean_result(lines=[])
+
+    async def fake_extract_vision_mode(images):
+        calls["vision"] += 1
+        return _clean_result(lines=[])  # non fiable aussi -> pas de 3e appel pour autant
+
+    monkeypatch.setattr(invoice_pipeline, "extract_text_mode", fake_extract_text_mode)
+    monkeypatch.setattr(invoice_pipeline, "extract_vision_mode", fake_extract_vision_mode)
+
+    result = await invoice_pipeline.process_uploaded_pdf(db_session, "f.pdf", simple_invoice_pdf())
+    assert result.outcome == "CREATED"
+    assert calls == {"text": 1, "vision": 1}
+
+    invoice = await db_session.get(Invoice, result.invoice_id)
+    assert invoice.extraction_method == "NATIVE_THEN_VISION"
+
+
 async def test_scanned_pdf_uses_vision_mode_directly(db_session, monkeypatch):
     calls = {"text": 0, "vision": 0}
 

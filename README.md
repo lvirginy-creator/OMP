@@ -49,4 +49,8 @@ Variable d'environnement requise : `ANTHROPIC_API_KEY` (sinon l'application fonc
 - [x] Étape 5 — Écran de vérification : édition des lignes (ajout/suppression), compteur d'écart temps réel, bouton Valider (grisé si total incohérent ou champ manquant), bandeau doublon possible, suppression avec corbeille 30 jours (§6.1, avancée depuis l'étape 8)
 - [x] Étape 6 — File des références à mapper : regroupement par fournisseur/référence normalisée, quantité cumulée, saisie en ligne sans rechargement (HTMX), recalcul rétroactif des factures concernées (passage automatique en Validée si c'était la seule anomalie)
 - [x] Étape 7 — Export Excel : deux onglets (Factures / Détail achats), filtres période/fournisseurs/statut, en-têtes figées + filtre auto, lignes non mappées surlignées, ligne de totaux
-- [ ] Étape 8 — Finitions
+- [x] Étape 8 — Finitions : fusion/renommage de fournisseurs, écran Journal, tests §11 complets (chaque code d'anomalie, résolution de mapping spécifique>global>absent, plafond à 2 appels LLM)
+
+## Statut
+
+Les 8 étapes du plan de développement sont terminées. Reste à valider avec de vraies factures (clé `ANTHROPIC_API_KEY` à ajouter dans `.env`) pour caler les seuils de classification et le prompt d'extraction sur le parc réel de documents.

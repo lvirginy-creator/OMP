@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -18,7 +19,7 @@ from app.services.excel_mappings import (
     generate_template,
     parse_workbook,
 )
-from app.services.suppliers import now_iso
+from app.services.suppliers import merge_suppliers, now_iso
 
 router = APIRouter(prefix="/referentiel")
 templates = Jinja2Templates(directory="app/templates")
@@ -49,11 +50,44 @@ async def _load_mappings(db: AsyncSession, q: str | None):
 
 
 @router.get("", response_class=HTMLResponse)
-async def list_mappings(request: Request, q: str | None = None, db: AsyncSession = Depends(get_db)):
+async def list_mappings(
+    request: Request,
+    q: str | None = None,
+    merge_error: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
     rows = await _load_mappings(db, q)
+    suppliers = (await db.execute(select(Supplier).order_by(Supplier.name))).scalars().all()
     return templates.TemplateResponse(
-        request, "referentiel/list.html", {"rows": rows, "q": q or ""}
+        request,
+        "referentiel/list.html",
+        {"rows": rows, "q": q or "", "suppliers": suppliers, "merge_error": merge_error},
     )
+
+
+@router.post("/fournisseurs/{supplier_id}/rename")
+async def rename_supplier(supplier_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    form = await request.form()
+    new_name = str(form.get("name", "")).strip()
+    supplier = await db.get(Supplier, supplier_id)
+    if supplier is None or not new_name:
+        return Response(status_code=404)
+    supplier.name = new_name
+    await db.commit()
+    return RedirectResponse("/referentiel", status_code=303)
+
+
+@router.post("/fournisseurs/{supplier_id}/merge")
+async def merge_supplier_route(
+    supplier_id: int, target_id: int = Form(...), db: AsyncSession = Depends(get_db)
+):
+    try:
+        await merge_suppliers(db, keep_id=target_id, absorbed_id=supplier_id)
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return RedirectResponse("/referentiel?merge_error=1", status_code=303)
+    return RedirectResponse("/referentiel", status_code=303)
 
 
 @router.get("/modele")

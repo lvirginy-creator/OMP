@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Journal — Suivi des achats{% endblock %}
+{% block content %}
+<h1>Journal</h1>
+
+{% set outcome_labels = {
+  "CREATED": "Créée",
+  "REJECTED_DUPLICATE": "Refusée (doublon)",
+  "ERROR": "Erreur",
+  "MAPPINGS_UPSERTED": "Référentiel mis à jour",
+  "DELETED": "Supprimée",
+} %}
+
+<table>
+  <thead>
+    <tr><th>Date</th><th>Type</th><th>Fichier</th><th>Résultat</th><th>Détail</th></tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+    <tr>
+      <td>{{ e.created_at }}</td>
+      <td>{{ "Facture" if e.kind == "INVOICE" else "Référentiel" }}</td>
+      <td>{{ e.filename }}</td>
+      <td>
+        {% if e.outcome == "CREATED" %}<span class="badge badge-validated">{{ outcome_labels.get(e.outcome, e.outcome) }}</span>
+        {% elif e.outcome in ("REJECTED_DUPLICATE", "ERROR") %}<span class="badge badge-review">{{ outcome_labels.get(e.outcome, e.outcome) }}</span>
+        {% else %}<span class="badge">{{ outcome_labels.get(e.outcome, e.outcome) }}</span>{% endif %}
+        {% if e.invoice_id %}<a href="/factures/{{ e.invoice_id }}">voir</a>{% endif %}
+      </td>
+      <td>{{ e.message or "" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">Aucune entrée pour l'instant.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -45,4 +45,39 @@
     {% endfor %}
   </tbody>
 </table>
+
+<h2>Fournisseurs</h2>
+{% if merge_error %}
+<div class="anomaly-banner">La fusion a échoué : le fournisseur cible a déjà une correspondance pour une des références du fournisseur absorbé. Désactive ou supprime le doublon avant de réessayer.</div>
+{% endif %}
+<table>
+  <thead>
+    <tr><th>Nom</th><th>Renommer</th><th>Fusionner dans</th></tr>
+  </thead>
+  <tbody>
+    {% for s in suppliers %}
+    <tr>
+      <td>{{ s.name }}</td>
+      <td>
+        <form method="post" action="/referentiel/fournisseurs/{{ s.id }}/rename" style="display:flex; gap:.5rem;">
+          <input type="text" name="name" value="{{ s.name }}">
+          <button type="submit" class="secondary">Renommer</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" action="/referentiel/fournisseurs/{{ s.id }}/merge" style="display:flex; gap:.5rem;" onsubmit="return confirm('Fusionner {{ s.name }} dans le fournisseur choisi ? Ses factures et mappings seront réaffectés, {{ s.name }} deviendra un alias.');">
+          <select name="target_id">
+            {% for other in suppliers if other.id != s.id %}
+            <option value="{{ other.id }}">{{ other.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="secondary">Fusionner</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">Aucun fournisseur pour l'instant.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% endblock %}

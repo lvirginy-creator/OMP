@@ -57,7 +57,10 @@ async def merge_suppliers(db: AsyncSession, keep_id: int, absorbed_id: int) -> N
     if existing_alias.scalar_one_or_none() is None:
         db.add(SupplierAlias(supplier_id=keep_id, normalized_alias=absorbed.normalized_name))
 
-    for alias in absorbed.aliases:
+    existing_aliases = await db.execute(
+        select(SupplierAlias).where(SupplierAlias.supplier_id == absorbed_id)
+    )
+    for alias in existing_aliases.scalars():
         alias.supplier_id = keep_id
 
     await db.delete(absorbed)
