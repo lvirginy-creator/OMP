@@ -5,20 +5,10 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.get("/")
-def home(request: Request):
-    return templates.TemplateResponse(request, "index.html", {})
-
-
 def _placeholder(request: Request, title: str, note: str):
     return templates.TemplateResponse(
         request, "placeholder.html", {"title": title, "note": note}
     )
-
-
-@router.get("/factures")
-def factures(request: Request):
-    return _placeholder(request, "Factures", "arrive à l'étape 3")
 
 
 @router.get("/a-mapper")

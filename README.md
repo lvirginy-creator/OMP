@@ -30,6 +30,8 @@ Les migrations Alembic s'appliquent automatiquement au démarrage. Application d
 pytest
 ```
 
+La suite tourne sans clé API : les tests du pipeline d'extraction simulent les réponses de Claude (monkeypatch), et les PDF de test (natifs, scannés, OCR dégradée) sont générés à la volée dans `tests/fixtures/pdf_builder.py` — aucun document réel n'est nécessaire ni committé.
+
 ## Docker
 
 ```bash
@@ -42,8 +44,8 @@ Variable d'environnement requise : `ANTHROPIC_API_KEY` (sinon l'application fonc
 
 - [x] Étape 1 — Socle FastAPI, SQLAlchemy, Alembic, Docker, `/health`, écran d'accueil vide
 - [x] Étape 2 — Référentiel (mappings) : import/export Excel avec upsert normalisé, écran de gestion, édition/désactivation en ligne
-- [ ] Étape 3 — Dépôt et extraction PDF
-- [ ] Étape 4 — Doublons et anomalies
+- [x] Étape 3 — Dépôt et extraction PDF : classification TEXTE/SCAN/MIXTE, mode texte + mode vision, escalade automatique, tool use Claude, dropzone accueil, liste + détail facture, Ré-extraire
+- [x] Étape 4 — Doublons et anomalies : clé métier + hash + similarité, 9 codes d'anomalie (§6.3), statut auto VALIDATED/NEEDS_REVIEW
 - [ ] Étape 5 — Écran de vérification
 - [ ] Étape 6 — File des références à mapper
 - [ ] Étape 7 — Export Excel

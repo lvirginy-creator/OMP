@@ -2,5 +2,26 @@
 {% block title %}Accueil — Suivi des achats{% endblock %}
 {% block content %}
 <h1>Suivi des achats</h1>
-<p>Application en cours de construction — dépôt de factures et tableau de bord arrivent à l'étape 3 du plan de développement.</p>
+
+<div class="grid">
+  <a href="/factures?statut=NEEDS_REVIEW" role="button" class="secondary">{{ review_count }} facture(s) à vérifier</a>
+  <a href="/a-mapper" role="button" class="secondary">{{ unmapped_count }} référence(s) à mapper</a>
+  <a href="/factures" role="button" class="secondary">{{ month_count }} facture(s) ce mois</a>
+</div>
+
+<article>
+  <h2>Déposer des factures</h2>
+  <form hx-post="/factures/upload" hx-target="#upload-results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-indicator">
+    <input type="file" name="files" accept="application/pdf" multiple required>
+    <button type="submit">Importer</button>
+    <span id="upload-indicator" class="htmx-indicator">Traitement en cours…</span>
+  </form>
+  <div id="upload-results"></div>
+</article>
+
+<style>
+  .htmx-indicator { display:none; }
+  .htmx-request .htmx-indicator { display:inline; }
+  .htmx-request.htmx-indicator { display:inline; }
+</style>
 {% endblock %}

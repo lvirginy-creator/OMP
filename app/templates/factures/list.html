@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Factures — Suivi des achats{% endblock %}
+{% block content %}
+<h1>Factures</h1>
+
+<form method="get" action="/factures" class="grid">
+  <label>Du <input type="date" name="date_du" value="{{ date_du }}"></label>
+  <label>Au <input type="date" name="date_au" value="{{ date_au }}"></label>
+  <label>Fournisseur
+    <select name="fournisseur_id">
+      <option value="">Tous</option>
+      {% for s in suppliers %}
+      <option value="{{ s.id }}" {% if fournisseur_id|string == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Statut
+    <select name="statut">
+      <option value="">Tous</option>
+      <option value="NEEDS_REVIEW" {% if statut == "NEEDS_REVIEW" %}selected{% endif %}>À vérifier</option>
+      <option value="VALIDATED" {% if statut == "VALIDATED" %}selected{% endif %}>Validée</option>
+    </select>
+  </label>
+  <label>Type
+    <select name="type">
+      <option value="">Tous</option>
+      <option value="INVOICE" {% if type == "INVOICE" %}selected{% endif %}>Facture</option>
+      <option value="CREDIT_NOTE" {% if type == "CREDIT_NOTE" %}selected{% endif %}>Avoir</option>
+    </select>
+  </label>
+  <button type="submit">Filtrer</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Date</th><th>Fournisseur</th><th>Type</th><th>N°</th>
+      <th>Total HT</th><th>Total TTC</th><th>Lignes articles</th><th>Statut</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for invoice, supplier_name in rows %}
+    <tr>
+      <td>{{ invoice.invoice_date or "—" }}</td>
+      <td>{{ supplier_name or "—" }}</td>
+      <td>{% if invoice.document_type == "CREDIT_NOTE" %}Avoir{% else %}Facture{% endif %}</td>
+      <td>{{ invoice.invoice_number or "—" }}</td>
+      <td>{{ "%.2f"|format(invoice.total_ht) if invoice.total_ht is not none else "—" }} €</td>
+      <td>{{ "%.2f"|format(invoice.total_ttc) if invoice.total_ttc is not none else "—" }} €</td>
+      <td>{{ invoice.lines | selectattr("line_type", "equalto", "ARTICLE") | list | length }}</td>
+      <td>{% if invoice.status == "VALIDATED" %}<span class="badge badge-validated">Validée</span>{% else %}<span class="badge badge-review">À vérifier</span>{% endif %}</td>
+      <td>
+        <a href="/factures/{{ invoice.id }}">Ouvrir</a>
+        <a href="/factures/{{ invoice.id }}/pdf" target="_blank">PDF</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9">Aucune facture pour l'instant.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

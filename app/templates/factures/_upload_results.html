@@ -1,0 +1,23 @@
+<table>
+  <thead>
+    <tr><th>Fichier</th><th>Résultat</th></tr>
+  </thead>
+  <tbody>
+    {% for r in results %}
+    <tr>
+      <td>{{ r.filename }}</td>
+      <td>
+        {% if r.result.outcome == "CREATED" %}
+          <span class="badge badge-validated">Importée</span>
+          <a href="/factures/{{ r.result.invoice_id }}">Voir la facture</a>
+        {% elif r.result.outcome == "REJECTED_DUPLICATE" %}
+          <span class="badge badge-review">Doublon</span> {{ r.result.message }}
+          {% if r.result.existing_invoice_id %}<a href="/factures/{{ r.result.existing_invoice_id }}">Voir la facture existante</a>{% endif %}
+        {% else %}
+          <span class="badge">Erreur</span> {{ r.result.message }}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
