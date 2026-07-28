@@ -46,7 +46,7 @@ Variable d'environnement requise : `ANTHROPIC_API_KEY` (sinon l'application fonc
 - [x] Étape 2 — Référentiel (mappings) : import/export Excel avec upsert normalisé, écran de gestion, édition/désactivation en ligne
 - [x] Étape 3 — Dépôt et extraction PDF : classification TEXTE/SCAN/MIXTE, mode texte + mode vision, escalade automatique, tool use Claude, dropzone accueil, liste + détail facture, Ré-extraire
 - [x] Étape 4 — Doublons et anomalies : clé métier + hash + similarité, 9 codes d'anomalie (§6.3), statut auto VALIDATED/NEEDS_REVIEW
-- [ ] Étape 5 — Écran de vérification
+- [x] Étape 5 — Écran de vérification : édition des lignes (ajout/suppression), compteur d'écart temps réel, bouton Valider (grisé si total incohérent ou champ manquant), bandeau doublon possible, suppression avec corbeille 30 jours (§6.1, avancée depuis l'étape 8)
 - [ ] Étape 6 — File des références à mapper
 - [ ] Étape 7 — Export Excel
 - [ ] Étape 8 — Finitions

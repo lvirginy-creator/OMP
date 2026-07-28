@@ -2,24 +2,45 @@
 {% block title %}Facture {{ invoice.invoice_number or invoice.id }} — Suivi des achats{% endblock %}
 {% block content %}
 {% set anomaly_labels = {
-  "A_TOTAL_MISMATCH": "La somme des lignes ne correspond pas au total HT.",
-  "A_UNMAPPED_REF": "Au moins une référence article n'est pas mappée.",
-  "A_MISSING_FIELD": "Un champ obligatoire est manquant (fournisseur, n°, date ou total HT).",
-  "A_BAD_LINE": "Une ligne article a une quantité ou un prix unitaire manquant.",
-  "A_POSSIBLE_DUPLICATE": "Facture peut-être déjà importée sous un autre numéro.",
-  "A_TOTALS_INCONSISTENT": "Total HT + TVA ne correspond pas au total TTC.",
-  "A_NO_LINES": "Aucune ligne n'a pu être extraite.",
-  "A_LOW_CONFIDENCE": "Au moins une ligne a été lue avec une confiance faible (scan).",
-  "A_TOO_MANY_PAGES": "Document trop long pour le mode scan (> 12 pages).",
-  "A_NEW_SUPPLIER": "Nouveau fournisseur (information).",
+  "A_TOTAL_MISMATCH": "La somme des lignes ne correspond pas au total HT — corrige les lignes ou le total HT.",
+  "A_UNMAPPED_REF": "Au moins une référence article n'est pas mappée — ça n'empêche pas la validation, tu pourras mapper plus tard.",
+  "A_MISSING_FIELD": "Un champ obligatoire est manquant (fournisseur, n°, date ou total HT) — complète-le ci-dessous.",
+  "A_BAD_LINE": "Une ligne article a une quantité ou un prix unitaire manquant — corrige la ligne.",
+  "A_POSSIBLE_DUPLICATE": "Facture peut-être déjà importée sous un autre numéro — voir le bandeau ci-dessous.",
+  "A_TOTALS_INCONSISTENT": "Total HT + TVA ne correspond pas au total TTC — vérifie les totaux.",
+  "A_NO_LINES": "Aucune ligne n'a pu être extraite — ajoute les lignes manuellement.",
+  "A_LOW_CONFIDENCE": "Au moins une ligne a été lue avec une confiance faible (scan) — vérifie-la (bordure orange).",
+  "A_TOO_MANY_PAGES": "Document trop long pour le mode scan (> 12 pages) — saisie manuelle nécessaire.",
+  "A_NEW_SUPPLIER": "Nouveau fournisseur (information, n'empêche rien).",
 } %}
+{% set charge_kinds = ["SHIPPING", "ECO_TAX", "DISCOUNT", "DEPOSIT", "OTHER"] %}
 
 <div class="grid">
   <div>
-    <iframe src="/factures/{{ invoice.id }}/pdf" style="width:100%; height:80vh; border:1px solid var(--pico-muted-border-color);"></iframe>
+    <iframe src="/factures/{{ invoice.id }}/pdf" style="width:100%; height:85vh; border:1px solid var(--pico-muted-border-color);"></iframe>
   </div>
   <div>
-    <h1>Facture {{ invoice.invoice_number or "(sans numéro)" }}</h1>
+    <h1>Facture {{ invoice.invoice_number or "(sans numéro)" }}
+      {% if invoice.status == "VALIDATED" %}<span class="badge badge-validated">Validée</span>{% else %}<span class="badge badge-review">À vérifier</span>{% endif %}
+    </h1>
+
+    {% if save_error %}
+    <div class="anomaly-banner"><strong>Enregistrement impossible :</strong> {{ save_error }}</div>
+    {% endif %}
+
+    {% if duplicate_candidate %}
+    <div class="anomaly-banner">
+      <strong>Doublon possible</strong> avec la <a href="/factures/{{ duplicate_candidate.id }}">facture n° {{ duplicate_candidate.invoice_number or duplicate_candidate.id }}</a>, même fournisseur/date/montant.
+      <div style="margin-top:.5rem">
+        <form method="post" action="/factures/{{ invoice.id }}/validate" style="display:inline">
+          <button type="submit" {% if not can_validate %}disabled{% endif %}>Ce n'est pas un doublon, valider</button>
+        </form>
+        <form method="post" action="/factures/{{ invoice.id }}/delete" style="display:inline" onsubmit="return confirm('Supprimer définitivement cet import (le PDF est conservé 30 jours) ?');">
+          <button type="submit" class="secondary">Supprimer cet import</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
 
     {% if anomalies %}
     <div class="anomaly-banner">
@@ -32,47 +53,142 @@
     </div>
     {% endif %}
 
-    <table>
-      <tr><th>Fournisseur</th><td>{{ supplier.name if supplier else "—" }}</td></tr>
-      <tr><th>Type</th><td>{% if invoice.document_type == "CREDIT_NOTE" %}Avoir{% else %}Facture{% endif %}</td></tr>
-      <tr><th>Date</th><td>{{ invoice.invoice_date or "—" }}</td></tr>
-      <tr><th>Devise</th><td>{{ invoice.currency }}</td></tr>
-      <tr><th>Total HT</th><td>{{ "%.2f"|format(invoice.total_ht) if invoice.total_ht is not none else "—" }}</td></tr>
-      <tr><th>Total TVA</th><td>{{ "%.2f"|format(invoice.total_vat) if invoice.total_vat is not none else "—" }}</td></tr>
-      <tr><th>Total TTC</th><td>{{ "%.2f"|format(invoice.total_ttc) if invoice.total_ttc is not none else "—" }}</td></tr>
-      <tr><th>Statut</th><td>{% if invoice.status == "VALIDATED" %}<span class="badge badge-validated">Validée</span>{% else %}<span class="badge badge-review">À vérifier</span>{% endif %}</td></tr>
-    </table>
+    <form method="post" action="/factures/{{ invoice.id }}/save" id="invoice-form">
+      <table>
+        <tr><th>Fournisseur</th><td>
+          <input type="text" name="supplier_name" list="suppliers-datalist" value="{{ supplier.name if supplier else '' }}" placeholder="Nom du fournisseur">
+          <datalist id="suppliers-datalist">
+            {% for s in suppliers %}<option value="{{ s.name }}">{% endfor %}
+          </datalist>
+        </td></tr>
+        <tr><th>Type</th><td>
+          <select name="document_type">
+            <option value="INVOICE" {% if invoice.document_type == "INVOICE" %}selected{% endif %}>Facture</option>
+            <option value="CREDIT_NOTE" {% if invoice.document_type == "CREDIT_NOTE" %}selected{% endif %}>Avoir</option>
+          </select>
+        </td></tr>
+        <tr><th>N°</th><td><input type="text" name="invoice_number" value="{{ invoice.invoice_number or '' }}"></td></tr>
+        <tr><th>Date</th><td><input type="date" name="invoice_date" value="{{ invoice.invoice_date or '' }}"></td></tr>
+        <tr><th>Devise</th><td><input type="text" name="currency" value="{{ invoice.currency }}" style="width:5rem"></td></tr>
+        <tr><th>Total HT</th><td><input type="number" step="0.01" name="total_ht" id="total_ht" value="{{ invoice.total_ht if invoice.total_ht is not none else '' }}" oninput="recalcEcart()"></td></tr>
+        <tr><th>Total TVA</th><td><input type="number" step="0.01" name="total_vat" value="{{ invoice.total_vat if invoice.total_vat is not none else '' }}"></td></tr>
+        <tr><th>Total TTC</th><td><input type="number" step="0.01" name="total_ttc" value="{{ invoice.total_ttc if invoice.total_ttc is not none else '' }}"></td></tr>
+      </table>
 
-    <h2>Lignes</h2>
-    <table>
-      <thead>
-        <tr><th>Type</th><th>Réf. fournisseur</th><th>Libellé</th><th>Qté</th><th>PU net</th><th>Montant</th></tr>
-      </thead>
-      <tbody>
-        {% for line in invoice.lines %}
-        {% set raw = line.raw | fromjson if line.raw else {} %}
-        <tr {% if raw.get("low_confidence") %}class="low-confidence"{% endif %}>
-          <td>{{ line.line_type }}{% if line.charge_kind %} ({{ line.charge_kind }}){% endif %}</td>
-          <td>{{ line.supplier_ref or "" }}</td>
-          <td>{{ line.supplier_label or "" }}</td>
-          <td>{{ line.quantity if line.quantity is not none else "" }}</td>
-          <td>{{ "%.2f"|format(line.unit_price_net) if line.unit_price_net is not none else "" }}</td>
-          <td>{{ "%.2f"|format(line.line_total_net) if line.line_total_net is not none else "" }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6">Aucune ligne.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+      <h2>Lignes</h2>
+      <table id="lines-table">
+        <thead>
+          <tr>
+            <th>Type</th><th>Réf. fournisseur</th><th>Libellé</th><th>Qté</th><th>PU net</th><th>Montant</th><th>Réf. interne</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="lines-tbody">
+          {% for line in invoice.lines %}
+          {% set raw = line.raw | fromjson if line.raw else {} %}
+          <tr {% if raw.get("low_confidence") %}class="low-confidence"{% endif %}>
+            <td>
+              <select name="line_type" onchange="toggleChargeKind(this)">
+                <option value="ARTICLE" {% if line.line_type == "ARTICLE" %}selected{% endif %}>ARTICLE</option>
+                <option value="CHARGE" {% if line.line_type == "CHARGE" %}selected{% endif %}>CHARGE</option>
+              </select>
+              <select name="charge_kind" style="{% if line.line_type != 'CHARGE' %}display:none{% endif %}">
+                <option value=""></option>
+                {% for ck in charge_kinds %}
+                <option value="{{ ck }}" {% if line.charge_kind == ck %}selected{% endif %}>{{ ck }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td><input type="text" name="supplier_ref" value="{{ line.supplier_ref or '' }}" size="10"></td>
+            <td><input type="text" name="supplier_label" value="{{ line.supplier_label or '' }}"></td>
+            <td><input type="number" step="0.01" name="quantity" value="{{ line.quantity if line.quantity is not none else '' }}" size="5" oninput="recalcEcart()"></td>
+            <td><input type="number" step="0.01" name="unit_price_net" value="{{ line.unit_price_net if line.unit_price_net is not none else '' }}" size="6" oninput="recalcEcart()"></td>
+            <td><input type="number" step="0.01" name="line_total_net" value="{{ line.line_total_net if line.line_total_net is not none else '' }}" size="6" oninput="recalcEcart()"></td>
+            <td>
+              {% if line.line_type == "ARTICLE" %}
+                {% set our_ref = resolved_refs.get(line.id) %}
+                {% if our_ref %}{{ our_ref }}{% else %}<a href="/a-mapper">mapper</a>{% endif %}
+              {% endif %}
+            </td>
+            <td><button type="button" class="secondary" onclick="this.closest('tr').remove(); recalcEcart();">✕</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button type="button" class="secondary" onclick="addLine()">+ Ajouter une ligne</button>
+
+      <p id="ecart-counter"></p>
+
+      <button type="submit">Enregistrer</button>
+      <button type="submit" formaction="/factures/{{ invoice.id }}/validate" {% if not can_validate %}disabled title="Total incohérent ou champ obligatoire manquant"{% endif %}>Valider</button>
+    </form>
 
     <p><small>Extrait en mode {{ {"NATIVE_LLM": "texte", "VISION_LLM": "vision", "NATIVE_THEN_VISION": "texte puis vision (escalade)", "MANUAL": "saisie manuelle"}.get(invoice.extraction_method, invoice.extraction_method) }} — document classé {{ invoice.doc_class or "?" }}.</small></p>
 
-    <form method="post" action="/factures/{{ invoice.id }}/reextract" style="display:inline" hx-confirm="Cela va remplacer les lignes actuelles par une nouvelle extraction. Continuer ?">
+    <form method="post" action="/factures/{{ invoice.id }}/reextract" style="display:inline" onsubmit="return confirm('Cela va remplacer les lignes actuelles par une nouvelle extraction. Continuer ?');">
       <button type="submit" class="secondary">Ré-extraire</button>
     </form>
-    <form method="post" action="/factures/{{ invoice.id }}/reextract-vision" style="display:inline" hx-confirm="Cela va forcer le mode vision et remplacer les lignes actuelles. Continuer ?">
+    <form method="post" action="/factures/{{ invoice.id }}/reextract-vision" style="display:inline" onsubmit="return confirm('Cela va forcer le mode vision et remplacer les lignes actuelles. Continuer ?');">
       <button type="submit" class="secondary">Ré-extraire en mode vision</button>
+    </form>
+    <form method="post" action="/factures/{{ invoice.id }}/delete" style="display:inline" onsubmit="return confirm('Supprimer définitivement cet import (le PDF est conservé 30 jours) ?');">
+      <button type="submit" class="secondary">Supprimer</button>
     </form>
   </div>
 </div>
+
+<template id="line-row-template">
+  <tr>
+    <td>
+      <select name="line_type" onchange="toggleChargeKind(this)">
+        <option value="ARTICLE" selected>ARTICLE</option>
+        <option value="CHARGE">CHARGE</option>
+      </select>
+      <select name="charge_kind" style="display:none">
+        <option value=""></option>
+        {% for ck in charge_kinds %}<option value="{{ ck }}">{{ ck }}</option>{% endfor %}
+      </select>
+    </td>
+    <td><input type="text" name="supplier_ref" size="10"></td>
+    <td><input type="text" name="supplier_label"></td>
+    <td><input type="number" step="0.01" name="quantity" size="5" oninput="recalcEcart()"></td>
+    <td><input type="number" step="0.01" name="unit_price_net" size="6" oninput="recalcEcart()"></td>
+    <td><input type="number" step="0.01" name="line_total_net" size="6" oninput="recalcEcart()"></td>
+    <td></td>
+    <td><button type="button" class="secondary" onclick="this.closest('tr').remove(); recalcEcart();">✕</button></td>
+  </tr>
+</template>
+
+<script>
+  const TOLERANCE = {{ tolerance }};
+
+  function toggleChargeKind(select) {
+    const row = select.closest('tr');
+    const chargeSelect = row.querySelector('select[name="charge_kind"]');
+    chargeSelect.style.display = select.value === 'CHARGE' ? '' : 'none';
+  }
+
+  function addLine() {
+    const tpl = document.getElementById('line-row-template');
+    const clone = tpl.content.cloneNode(true);
+    document.getElementById('lines-tbody').appendChild(clone);
+  }
+
+  function recalcEcart() {
+    const totals = Array.from(document.querySelectorAll('#lines-tbody input[name="line_total_net"]'))
+      .map(i => parseFloat(i.value))
+      .filter(v => !isNaN(v));
+    const sumLines = totals.reduce((a, b) => a + b, 0);
+    const totalHt = parseFloat(document.getElementById('total_ht').value);
+    const el = document.getElementById('ecart-counter');
+    if (isNaN(totalHt)) {
+      el.innerHTML = `Σ lignes = ${sumLines.toFixed(2)} € | Total HT facture = — | Écart = —`;
+      return;
+    }
+    const ecart = Math.abs(sumLines - totalHt);
+    const color = ecart <= TOLERANCE ? 'green' : 'red';
+    el.innerHTML = `Σ lignes = ${sumLines.toFixed(2)} € | Total HT facture = ${totalHt.toFixed(2)} € | Écart = <strong style="color:${color}">${ecart.toFixed(2)} €</strong>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', recalcEcart);
+</script>
 {% endblock %}

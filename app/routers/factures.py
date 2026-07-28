@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
@@ -12,7 +13,10 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.supplier import Supplier
+from app.services.anomalies import can_validate, find_duplicate_candidate
+from app.services.invoice_edit import delete_invoice, force_validate, save_invoice_edits
 from app.services.invoice_pipeline import process_uploaded_pdf, reextract_invoice
+from app.services.mapping_resolution import resolve_mapping
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -32,15 +36,12 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
             .where(InvoiceLine.line_type == "ARTICLE", InvoiceLine.supplier_ref.is_not(None))
         )
     ).all()
-    from app.services.mapping_resolution import resolve_mapping
 
     unmapped_keys = set()
     for supplier_ref, supplier_id in unmapped_refs:
         mapping = await resolve_mapping(db, supplier_id, supplier_ref)
         if mapping is None:
             unmapped_keys.add((supplier_id, supplier_ref.strip().upper()))
-
-    from datetime import datetime, timezone
 
     month_prefix = datetime.now(timezone.utc).strftime("%Y-%m")
     this_month = (
@@ -123,26 +124,46 @@ async def list_factures(
     )
 
 
+async def _detail_context(db: AsyncSession, invoice: Invoice) -> dict:
+    await db.refresh(invoice, attribute_names=["lines"])
+    supplier = await db.get(Supplier, invoice.supplier_id) if invoice.supplier_id else None
+    anomalies = json.loads(invoice.anomalies) if invoice.anomalies else []
+    diagnostics = json.loads(invoice.raw_diagnostics) if invoice.raw_diagnostics else {}
+    suppliers = (await db.execute(select(Supplier).order_by(Supplier.name))).scalars().all()
+
+    resolved_refs = {}
+    for line in invoice.lines:
+        if line.line_type != "ARTICLE":
+            continue
+        mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref)
+        resolved_refs[line.id] = mapping.our_ref if mapping else None
+
+    duplicate_candidate = None
+    if "A_POSSIBLE_DUPLICATE" in anomalies:
+        duplicate_candidate = await find_duplicate_candidate(db, invoice)
+
+    settings = get_settings()
+
+    return {
+        "invoice": invoice,
+        "supplier": supplier,
+        "suppliers": suppliers,
+        "anomalies": anomalies,
+        "diagnostics": diagnostics,
+        "resolved_refs": resolved_refs,
+        "duplicate_candidate": duplicate_candidate,
+        "can_validate": can_validate(anomalies),
+        "tolerance": settings.tolerance_total,
+    }
+
+
 @router.get("/factures/{invoice_id}", response_class=HTMLResponse)
 async def detail(invoice_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     invoice = await db.get(Invoice, invoice_id)
     if invoice is None:
         return Response(status_code=404)
-    await db.refresh(invoice, attribute_names=["lines"])
-    supplier = await db.get(Supplier, invoice.supplier_id) if invoice.supplier_id else None
-    anomalies = json.loads(invoice.anomalies) if invoice.anomalies else []
-    diagnostics = json.loads(invoice.raw_diagnostics) if invoice.raw_diagnostics else {}
-
-    return templates.TemplateResponse(
-        request,
-        "factures/detail.html",
-        {
-            "invoice": invoice,
-            "supplier": supplier,
-            "anomalies": anomalies,
-            "diagnostics": diagnostics,
-        },
-    )
+    context = await _detail_context(db, invoice)
+    return templates.TemplateResponse(request, "factures/detail.html", context)
 
 
 @router.get("/factures/{invoice_id}/pdf")
@@ -177,3 +198,82 @@ async def reextract_vision(invoice_id: int, db: AsyncSession = Depends(get_db)):
         return Response(status_code=404)
     await reextract_invoice(db, invoice, force_vision=True)
     return RedirectResponse(f"/factures/{invoice_id}", status_code=303)
+
+
+def _to_float(value: str | None) -> float | None:
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        return round(float(value), 2)
+    except ValueError:
+        return None
+
+
+@router.post("/factures/{invoice_id}/save", response_class=HTMLResponse)
+async def save(invoice_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    invoice = await db.get(Invoice, invoice_id)
+    if invoice is None:
+        return Response(status_code=404)
+    await db.refresh(invoice, attribute_names=["lines"])
+
+    form = await request.form()
+    header = {
+        "supplier_name": form.get("supplier_name"),
+        "document_type": form.get("document_type"),
+        "invoice_number": (form.get("invoice_number") or "").strip() or None,
+        "invoice_date": (form.get("invoice_date") or "").strip() or None,
+        "currency": (form.get("currency") or "EUR").strip() or "EUR",
+        "total_ht": _to_float(form.get("total_ht")),
+        "total_vat": _to_float(form.get("total_vat")),
+        "total_ttc": _to_float(form.get("total_ttc")),
+    }
+
+    line_types = form.getlist("line_type")
+    charge_kinds = form.getlist("charge_kind")
+    supplier_refs = form.getlist("supplier_ref")
+    supplier_labels = form.getlist("supplier_label")
+    quantities = form.getlist("quantity")
+    unit_prices = form.getlist("unit_price_net")
+    line_totals = form.getlist("line_total_net")
+
+    lines = []
+    for i in range(len(line_types)):
+        lines.append(
+            {
+                "line_type": line_types[i] or "ARTICLE",
+                "charge_kind": (charge_kinds[i] or "").strip() or None,
+                "supplier_ref": (supplier_refs[i] or "").strip() or None,
+                "supplier_label": (supplier_labels[i] or "").strip(),
+                "quantity": _to_float(quantities[i]),
+                "unit_price_net": _to_float(unit_prices[i]),
+                "line_total_net": _to_float(line_totals[i]),
+            }
+        )
+
+    result = await save_invoice_edits(db, invoice, header, lines)
+    if not result.ok:
+        context = await _detail_context(db, invoice)
+        context["save_error"] = result.message
+        return templates.TemplateResponse(request, "factures/detail.html", context)
+
+    return RedirectResponse(f"/factures/{invoice_id}", status_code=303)
+
+
+@router.post("/factures/{invoice_id}/validate")
+async def validate(invoice_id: int, db: AsyncSession = Depends(get_db)):
+    invoice = await db.get(Invoice, invoice_id)
+    if invoice is None:
+        return Response(status_code=404)
+    await force_validate(db, invoice)
+    return RedirectResponse(f"/factures/{invoice_id}", status_code=303)
+
+
+@router.post("/factures/{invoice_id}/delete")
+async def delete(invoice_id: int, db: AsyncSession = Depends(get_db)):
+    invoice = await db.get(Invoice, invoice_id)
+    if invoice is None:
+        return Response(status_code=404)
+    settings = get_settings()
+    await delete_invoice(db, invoice, settings.deleted_pdfs_path)
+    return RedirectResponse("/factures", status_code=303)
