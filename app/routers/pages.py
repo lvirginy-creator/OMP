@@ -11,11 +11,6 @@ def _placeholder(request: Request, title: str, note: str):
     )
 
 
-@router.get("/a-mapper")
-def a_mapper(request: Request):
-    return _placeholder(request, "Références à mapper", "arrive à l'étape 6")
-
-
 @router.get("/export")
 def export(request: Request):
     return _placeholder(request, "Export", "arrive à l'étape 7")

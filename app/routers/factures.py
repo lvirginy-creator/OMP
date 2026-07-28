@@ -11,11 +11,12 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.models.invoice import Invoice, InvoiceLine
+from app.models.invoice import Invoice
 from app.models.supplier import Supplier
 from app.services.anomalies import can_validate, find_duplicate_candidate
 from app.services.invoice_edit import delete_invoice, force_validate, save_invoice_edits
 from app.services.invoice_pipeline import process_uploaded_pdf, reextract_invoice
+from app.services.mapping_queue import get_unmapped_groups
 from app.services.mapping_resolution import resolve_mapping
 
 router = APIRouter()
@@ -29,19 +30,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
         await db.execute(select(Invoice).where(Invoice.status == "NEEDS_REVIEW"))
     ).scalars().all()
 
-    unmapped_refs = (
-        await db.execute(
-            select(InvoiceLine.supplier_ref, Invoice.supplier_id)
-            .join(Invoice, Invoice.id == InvoiceLine.invoice_id)
-            .where(InvoiceLine.line_type == "ARTICLE", InvoiceLine.supplier_ref.is_not(None))
-        )
-    ).all()
-
-    unmapped_keys = set()
-    for supplier_ref, supplier_id in unmapped_refs:
-        mapping = await resolve_mapping(db, supplier_id, supplier_ref)
-        if mapping is None:
-            unmapped_keys.add((supplier_id, supplier_ref.strip().upper()))
+    unmapped_groups = await get_unmapped_groups(db)
 
     month_prefix = datetime.now(timezone.utc).strftime("%Y-%m")
     this_month = (
@@ -55,7 +44,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
         "index.html",
         {
             "review_count": len(review_count),
-            "unmapped_count": len(unmapped_keys),
+            "unmapped_count": len(unmapped_groups),
             "month_count": len(this_month),
         },
     )

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.core.db import ensure_data_dirs
-from app.routers import factures, pages, referentiel
+from app.routers import a_mapper, factures, pages, referentiel
 
 
 def run_migrations() -> None:
@@ -26,6 +26,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(pages.router)
 app.include_router(referentiel.router)
 app.include_router(factures.router)
+app.include_router(a_mapper.router)
 
 
 @app.get("/health")

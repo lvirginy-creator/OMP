@@ -47,6 +47,6 @@ Variable d'environnement requise : `ANTHROPIC_API_KEY` (sinon l'application fonc
 - [x] Étape 3 — Dépôt et extraction PDF : classification TEXTE/SCAN/MIXTE, mode texte + mode vision, escalade automatique, tool use Claude, dropzone accueil, liste + détail facture, Ré-extraire
 - [x] Étape 4 — Doublons et anomalies : clé métier + hash + similarité, 9 codes d'anomalie (§6.3), statut auto VALIDATED/NEEDS_REVIEW
 - [x] Étape 5 — Écran de vérification : édition des lignes (ajout/suppression), compteur d'écart temps réel, bouton Valider (grisé si total incohérent ou champ manquant), bandeau doublon possible, suppression avec corbeille 30 jours (§6.1, avancée depuis l'étape 8)
-- [ ] Étape 6 — File des références à mapper
+- [x] Étape 6 — File des références à mapper : regroupement par fournisseur/référence normalisée, quantité cumulée, saisie en ligne sans rechargement (HTMX), recalcul rétroactif des factures concernées (passage automatique en Validée si c'était la seule anomalie)
 - [ ] Étape 7 — Export Excel
 - [ ] Étape 8 — Finitions
