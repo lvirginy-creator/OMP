@@ -11,11 +11,6 @@ def _placeholder(request: Request, title: str, note: str):
     )
 
 
-@router.get("/export")
-def export(request: Request):
-    return _placeholder(request, "Export", "arrive à l'étape 7")
-
-
 @router.get("/journal")
 def journal(request: Request):
     return _placeholder(request, "Journal", "arrive à l'étape 8")
