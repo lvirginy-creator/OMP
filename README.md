@@ -51,6 +51,10 @@ Variable d'environnement requise : `ANTHROPIC_API_KEY` (sinon l'application fonc
 - [x] Étape 7 — Export Excel : deux onglets (Factures / Détail achats), filtres période/fournisseurs/statut, en-têtes figées + filtre auto, lignes non mappées surlignées, ligne de totaux
 - [x] Étape 8 — Finitions : fusion/renommage de fournisseurs, écran Journal, tests §11 complets (chaque code d'anomalie, résolution de mapping spécifique>global>absent, plafond à 2 appels LLM)
 
+## Extension hors cahier des charges
+
+- **Société** : liste gérée en admin (`/societes`, nom + actif/inactif), obligatoire au dépôt (une société par lot de fichiers déposés en une fois), modifiable ensuite par facture sur l'écran de vérification. Colonne ajoutée aux deux onglets de l'export Excel, filtrable au dépôt et à l'export.
+
 ## Statut
 
 Les 8 étapes du plan de développement sont terminées. Reste à valider avec de vraies factures (clé `ANTHROPIC_API_KEY` à ajouter dans `.env`) pour caler les seuils de classification et le prompt d'extraction sur le parc réel de documents.

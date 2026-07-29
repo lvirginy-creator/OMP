@@ -8,6 +8,15 @@
   <label>Du <input type="date" name="date_du"></label>
   <label>Au <input type="date" name="date_au"></label>
 
+  <label>Société(s)
+    <select name="societe_id" multiple size="4">
+      {% for s in societes %}
+      <option value="{{ s.id }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <small>Laisser vide pour inclure toutes les sociétés.</small>
+
   <label>Fournisseur(s)
     <select name="fournisseur_id" multiple size="6">
       {% for s in suppliers %}

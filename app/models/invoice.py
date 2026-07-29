@@ -8,6 +8,7 @@ class Invoice(Base):
     __tablename__ = "invoices"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    societe_id: Mapped[int | None] = mapped_column(ForeignKey("societes.id"))
     supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"))
     document_type: Mapped[str] = mapped_column(String(16), nullable=False)  # INVOICE | CREDIT_NOTE
     invoice_number: Mapped[str | None] = mapped_column(Text)

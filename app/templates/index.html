@@ -11,11 +11,23 @@
 
 <article>
   <h2>Déposer des factures</h2>
+  {% if not societes %}
+  <p>Aucune société active pour l'instant. <a href="/societes">Ajoutes-en une</a> avant de déposer des factures.</p>
+  {% else %}
   <form hx-post="/factures/upload" hx-target="#upload-results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-indicator">
+    <label>Société
+      <select name="societe_id" required>
+        <option value="">— Choisir —</option>
+        {% for s in societes %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <input type="file" name="files" accept="application/pdf" multiple required>
     <button type="submit">Importer</button>
     <span id="upload-indicator" class="htmx-indicator">Traitement en cours…</span>
   </form>
+  {% endif %}
   <div id="upload-results"></div>
 </article>
 

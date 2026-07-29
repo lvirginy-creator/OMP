@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.models.invoice import Invoice
+from app.models.societe import Societe
 from app.models.supplier import Supplier
 from app.services.anomalies import can_validate, find_duplicate_candidate
 from app.services.invoice_edit import delete_invoice, force_validate, save_invoice_edits
@@ -39,6 +40,10 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
         )
     ).scalars().all()
 
+    societes = (
+        await db.execute(select(Societe).where(Societe.active.is_(True)).order_by(Societe.name))
+    ).scalars().all()
+
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -46,6 +51,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
             "review_count": len(review_count),
             "unmapped_count": len(unmapped_groups),
             "month_count": len(this_month),
+            "societes": societes,
         },
     )
 
@@ -55,12 +61,21 @@ async def upload(request: Request, db: AsyncSession = Depends(get_db)):
     form = await request.form()
     files = form.getlist("files")
 
+    societe_id_raw = str(form.get("societe_id") or "").strip()
+    if not societe_id_raw:
+        return templates.TemplateResponse(
+            request,
+            "factures/_upload_results.html",
+            {"results": [], "global_error": "Choisis une société avant de déposer des factures."},
+        )
+    societe_id = int(societe_id_raw)
+
     results = []
     for f in files:
         if isinstance(f, str):
             continue
         content = await f.read()
-        outcome = await process_uploaded_pdf(db, f.filename or "facture.pdf", content)
+        outcome = await process_uploaded_pdf(db, f.filename or "facture.pdf", content, societe_id)
         results.append({"filename": f.filename, "result": outcome})
 
     return templates.TemplateResponse(
@@ -74,13 +89,15 @@ async def list_factures(
     statut: str | None = None,
     type: str | None = None,
     fournisseur_id: int | None = None,
+    societe_id: int | None = None,
     date_du: str | None = None,
     date_au: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     stmt = (
-        select(Invoice, Supplier.name)
+        select(Invoice, Supplier.name, Societe.name)
         .outerjoin(Supplier, Invoice.supplier_id == Supplier.id)
+        .outerjoin(Societe, Invoice.societe_id == Societe.id)
         .options(selectinload(Invoice.lines))
     )
     if statut:
@@ -89,6 +106,8 @@ async def list_factures(
         stmt = stmt.where(Invoice.document_type == type)
     if fournisseur_id:
         stmt = stmt.where(Invoice.supplier_id == fournisseur_id)
+    if societe_id:
+        stmt = stmt.where(Invoice.societe_id == societe_id)
     if date_du:
         stmt = stmt.where(Invoice.invoice_date >= date_du)
     if date_au:
@@ -97,6 +116,7 @@ async def list_factures(
 
     rows = (await db.execute(stmt)).all()
     suppliers = (await db.execute(select(Supplier).order_by(Supplier.name))).scalars().all()
+    societes = (await db.execute(select(Societe).order_by(Societe.name))).scalars().all()
 
     return templates.TemplateResponse(
         request,
@@ -104,9 +124,11 @@ async def list_factures(
         {
             "rows": rows,
             "suppliers": suppliers,
+            "societes": societes,
             "statut": statut or "",
             "type": type or "",
             "fournisseur_id": fournisseur_id or "",
+            "societe_id": societe_id or "",
             "date_du": date_du or "",
             "date_au": date_au or "",
         },
@@ -119,6 +141,7 @@ async def _detail_context(db: AsyncSession, invoice: Invoice) -> dict:
     anomalies = json.loads(invoice.anomalies) if invoice.anomalies else []
     diagnostics = json.loads(invoice.raw_diagnostics) if invoice.raw_diagnostics else {}
     suppliers = (await db.execute(select(Supplier).order_by(Supplier.name))).scalars().all()
+    societes = (await db.execute(select(Societe).order_by(Societe.name))).scalars().all()
 
     resolved_refs = {}
     for line in invoice.lines:
@@ -137,6 +160,7 @@ async def _detail_context(db: AsyncSession, invoice: Invoice) -> dict:
         "invoice": invoice,
         "supplier": supplier,
         "suppliers": suppliers,
+        "societes": societes,
         "anomalies": anomalies,
         "diagnostics": diagnostics,
         "resolved_refs": resolved_refs,
@@ -207,7 +231,9 @@ async def save(invoice_id: int, request: Request, db: AsyncSession = Depends(get
     await db.refresh(invoice, attribute_names=["lines"])
 
     form = await request.form()
+    societe_id_raw = str(form.get("societe_id") or "").strip()
     header = {
+        "societe_id": int(societe_id_raw) if societe_id_raw else None,
         "supplier_name": form.get("supplier_name"),
         "document_type": form.get("document_type"),
         "invoice_number": (form.get("invoice_number") or "").strip() or None,

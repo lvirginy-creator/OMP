@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.invoice import Invoice
+from app.models.societe import Societe
 from app.models.supplier import Supplier
 from app.services.mapping_resolution import resolve_mapping
 
@@ -34,6 +35,7 @@ async def _fetch_invoices(
     date_au: str | None,
     supplier_ids: list[int] | None,
     statut: str | None,
+    societe_ids: list[int] | None,
 ) -> list[Invoice]:
     stmt = select(Invoice).options(selectinload(Invoice.lines))
     if date_du:
@@ -44,6 +46,8 @@ async def _fetch_invoices(
         stmt = stmt.where(Invoice.supplier_id.in_(supplier_ids))
     if statut:
         stmt = stmt.where(Invoice.status == statut)
+    if societe_ids:
+        stmt = stmt.where(Invoice.societe_id.in_(societe_ids))
     return (await db.execute(stmt)).scalars().all()
 
 
@@ -58,13 +62,17 @@ async def build_export(
     date_au: str | None = None,
     supplier_ids: list[int] | None = None,
     statut: str | None = None,
+    societe_ids: list[int] | None = None,
 ) -> tuple[bytes, str]:
-    invoices = await _fetch_invoices(db, date_du, date_au, supplier_ids, statut)
+    invoices = await _fetch_invoices(db, date_du, date_au, supplier_ids, statut, societe_ids)
 
     supplier_names: dict[int, str] = {}
+    societe_names: dict[int, str] = {}
     if invoices:
         suppliers = (await db.execute(select(Supplier))).scalars().all()
         supplier_names = {s.id: s.name for s in suppliers}
+        societes = (await db.execute(select(Societe))).scalars().all()
+        societe_names = {s.id: s.name for s in societes}
 
     wb = openpyxl.Workbook()
 
@@ -72,7 +80,7 @@ async def build_export(
     ws1: Worksheet = wb.active
     ws1.title = "Factures"
     headers1 = [
-        "Date", "Fournisseur", "Type", "N° facture", "Total HT", "Total TVA",
+        "Date", "Société", "Fournisseur", "Type", "N° facture", "Total HT", "Total TVA",
         "Total TTC", "dont frais et remises", "Nb lignes articles", "Statut", "Fichier source",
     ]
     ws1.append(headers1)
@@ -95,6 +103,7 @@ async def build_export(
         nb_articles = sum(1 for l in invoice.lines if l.line_type == "ARTICLE")
         row = [
             _fr_date(invoice.invoice_date),
+            societe_names.get(invoice.societe_id, ""),
             supplier_names.get(invoice.supplier_id, ""),
             "Avoir" if invoice.document_type == "CREDIT_NOTE" else "Facture",
             invoice.invoice_number or "",
@@ -109,7 +118,7 @@ async def build_export(
         ws1.append(row)
         r = ws1.max_row
         ws1.cell(r, 1).number_format = DATE_FORMAT
-        for col in (5, 6, 7, 8):
+        for col in (6, 7, 8, 9):
             ws1.cell(r, col).number_format = MONEY_FORMAT
 
         totals["total_ht"] += invoice.total_ht or 0.0
@@ -117,20 +126,20 @@ async def build_export(
         totals["total_ttc"] += invoice.total_ttc or 0.0
         totals["charges"] += charges
 
-    total_row = ["", "", "", "Total", totals["total_ht"], totals["total_vat"], totals["total_ttc"], totals["charges"], "", "", ""]
+    total_row = ["", "", "", "", "Total", totals["total_ht"], totals["total_vat"], totals["total_ttc"], totals["charges"], "", "", ""]
     ws1.append(total_row)
     r = ws1.max_row
-    for col in (4, 5, 6, 7, 8):
+    for col in (5, 6, 7, 8, 9):
         ws1.cell(r, col).font = Font(bold=True)
-    for col in (5, 6, 7, 8):
+    for col in (6, 7, 8, 9):
         ws1.cell(r, col).number_format = MONEY_FORMAT
 
-    _autosize(ws1, [12, 28, 10, 16, 12, 12, 12, 18, 14, 12, 28])
+    _autosize(ws1, [12, 20, 28, 10, 16, 12, 12, 12, 18, 14, 12, 28])
 
     # --- Onglet 2 : Détail achats --------------------------------------
     ws2: Worksheet = wb.create_sheet("Détail achats")
     headers2 = [
-        "Date", "Fournisseur", "Référence fournisseur", "Code barre", "Libellé fournisseur",
+        "Date", "Société", "Fournisseur", "Référence fournisseur", "Code barre", "Libellé fournisseur",
         "Notre référence", "Notre libellé", "Quantité achetée", "Prix unitaire d'achat",
         "Montant ligne", "N° facture", "Statut facture",
     ]
@@ -160,6 +169,7 @@ async def build_export(
         mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref)
         row = [
             _fr_date(invoice.invoice_date),
+            societe_names.get(invoice.societe_id, ""),
             supplier_names.get(invoice.supplier_id, ""),
             line.supplier_ref or "",
             mapping.ean if mapping and mapping.ean else "",
@@ -175,14 +185,14 @@ async def build_export(
         ws2.append(row)
         r = ws2.max_row
         ws2.cell(r, 1).number_format = DATE_FORMAT
-        for col in (9, 10):
+        for col in (10, 11):
             ws2.cell(r, col).number_format = MONEY_FORMAT
         if mapping is None:
             for col in range(1, len(headers2) + 1):
                 ws2.cell(r, col).fill = UNMAPPED_FILL
 
-    _autosize(ws2, [12, 28, 16, 16, 28, 16, 28, 12, 14, 12, 16, 12])
-    for col_idx in (8, 9, 10):
+    _autosize(ws2, [12, 20, 28, 16, 16, 28, 16, 28, 12, 14, 12, 16, 12])
+    for col_idx in (9, 10, 11):
         for row_idx in range(2, ws2.max_row + 1):
             ws2.cell(row_idx, col_idx).alignment = Alignment(horizontal="right")
 

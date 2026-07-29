@@ -39,6 +39,7 @@ async def save_invoice_edits(
 
     new_invoice_number = header.get("invoice_number")
 
+    invoice.societe_id = header.get("societe_id")
     invoice.supplier_id = supplier.id if supplier else None
     invoice.document_type = header.get("document_type") or "INVOICE"
     invoice.invoice_number = new_invoice_number

@@ -102,7 +102,7 @@ def _empty_manual_result() -> dict:
 
 
 async def process_uploaded_pdf(
-    db: AsyncSession, filename: str, content: bytes
+    db: AsyncSession, filename: str, content: bytes, societe_id: int | None = None
 ) -> ProcessResult:
     settings = get_settings()
     file_hash = hashlib.sha256(content).hexdigest()
@@ -190,6 +190,7 @@ async def process_uploaded_pdf(
     document_type = result.get("document_type") or "INVOICE"
 
     invoice = Invoice(
+        societe_id=societe_id,
         supplier_id=supplier_id,
         document_type=document_type,
         invoice_number=invoice_number,

@@ -55,6 +55,14 @@
 
     <form method="post" action="/factures/{{ invoice.id }}/save" id="invoice-form">
       <table>
+        <tr><th>Société</th><td>
+          <select name="societe_id" required>
+            <option value="">— Choisir —</option>
+            {% for s in societes %}
+            <option value="{{ s.id }}" {% if invoice.societe_id == s.id %}selected{% endif %}>{{ s.name }}{% if not s.active %} (inactive){% endif %}</option>
+            {% endfor %}
+          </select>
+        </td></tr>
         <tr><th>Fournisseur</th><td>
           <input type="text" name="supplier_name" list="suppliers-datalist" value="{{ supplier.name if supplier else '' }}" placeholder="Nom du fournisseur">
           <datalist id="suppliers-datalist">

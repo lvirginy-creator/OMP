@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sociétés — Suivi des achats{% endblock %}
+{% block content %}
+<h1>Sociétés</h1>
+<p>Liste des sociétés proposées au dépôt des factures.</p>
+
+<form method="post" action="/societes/create" style="display:flex; gap:.5rem; max-width:30rem;">
+  <input type="text" name="name" placeholder="Nom de la société" required>
+  <button type="submit">Ajouter</button>
+</form>
+
+<table>
+  <thead>
+    <tr><th>Nom</th><th>Statut</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for s in societes %}
+    <tr {% if not s.active %}style="opacity:.55"{% endif %}>
+      <td>
+        <form method="post" action="/societes/{{ s.id }}/rename" style="display:flex; gap:.5rem;">
+          <input type="text" name="name" value="{{ s.name }}">
+          <button type="submit" class="secondary">Renommer</button>
+        </form>
+      </td>
+      <td>{% if s.active %}<span class="badge badge-validated">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td>
+      <td>
+        <form method="post" action="/societes/{{ s.id }}/toggle">
+          <button type="submit" class="secondary">{% if s.active %}Désactiver{% else %}Activer{% endif %}</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">Aucune société pour l'instant — ajoutes-en une ci-dessus.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

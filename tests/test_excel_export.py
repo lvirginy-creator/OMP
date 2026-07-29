@@ -85,7 +85,7 @@ async def test_export_has_two_sheets_with_expected_headers(db_session, monkeypat
     wb = _load(content)
     assert wb.sheetnames == ["Factures", "Détail achats"]
     assert [c.value for c in wb["Factures"][1]] == [
-        "Date", "Fournisseur", "Type", "N° facture", "Total HT", "Total TVA",
+        "Date", "Société", "Fournisseur", "Type", "N° facture", "Total HT", "Total TVA",
         "Total TTC", "dont frais et remises", "Nb lignes articles", "Statut", "Fichier source",
     ]
 
@@ -97,10 +97,10 @@ async def test_charge_lines_excluded_from_detail_but_counted_in_factures(db_sess
 
     detail_rows = list(wb["Détail achats"].iter_rows(min_row=2, values_only=True))
     assert len(detail_rows) == 1  # seule la ligne ARTICLE
-    assert detail_rows[0][2] == "EXPREF-1"
+    assert detail_rows[0][3] == "EXPREF-1"
 
     factures_rows = list(wb["Factures"].iter_rows(min_row=2, max_row=2, values_only=True))
-    assert factures_rows[0][7] == 8.0  # dont frais et remises = la ligne CHARGE
+    assert factures_rows[0][8] == 8.0  # dont frais et remises = la ligne CHARGE
 
 
 async def test_sum_detail_plus_charges_equals_sum_total_ht(db_session, monkeypatch):
@@ -144,12 +144,12 @@ async def test_sum_detail_plus_charges_equals_sum_total_ht(db_session, monkeypat
     wb = _load(content)
 
     detail_sum = sum(
-        row[9] for row in wb["Détail achats"].iter_rows(min_row=2, values_only=True) if row[9] is not None
+        row[10] for row in wb["Détail achats"].iter_rows(min_row=2, values_only=True) if row[10] is not None
     )
     factures_rows = list(wb["Factures"].iter_rows(min_row=2, values_only=True))
     total_row = factures_rows[-1]
-    charges_sum = sum(r[7] for r in factures_rows[:-1] if r[7] is not None)
-    total_ht_sum = total_row[4]
+    charges_sum = sum(r[8] for r in factures_rows[:-1] if r[8] is not None)
+    total_ht_sum = total_row[5]
 
     assert round(detail_sum + charges_sum, 2) == round(total_ht_sum, 2)
 
@@ -186,9 +186,9 @@ async def test_mapped_reference_fills_our_ref_and_ean(db_session, monkeypatch):
     content, _ = await build_export(db_session)
     wb = _load(content)
     row = list(wb["Détail achats"].iter_rows(min_row=2, max_row=2, values_only=True))[0]
-    assert row[3] == "1234567890123"  # code barre
-    assert row[5] == "INT-EXPREF1"  # notre référence
-    assert row[6] == "Article interne export"
+    assert row[4] == "1234567890123"  # code barre
+    assert row[6] == "INT-EXPREF1"  # notre référence
+    assert row[7] == "Article interne export"
 
 
 async def test_status_filter_excludes_needs_review(db_session, monkeypatch):
@@ -200,3 +200,44 @@ async def test_status_filter_excludes_needs_review(db_session, monkeypatch):
     wb = _load(content)
     rows = list(wb["Factures"].iter_rows(min_row=2, values_only=True))
     assert len(rows) == 1  # uniquement la ligne de totaux, aucune facture
+
+
+async def test_societe_column_and_filter(db_session, monkeypatch):
+    from app.models.societe import Societe
+
+    societe_a = Societe(name="OMP A", active=True, created_at=now_iso())
+    societe_b = Societe(name="OMP B", active=True, created_at=now_iso())
+    db_session.add_all([societe_a, societe_b])
+    await db_session.commit()
+
+    async def fake_extract_text_mode(text_payload):
+        return _result()
+
+    monkeypatch.setattr(invoice_pipeline, "extract_text_mode", fake_extract_text_mode)
+    result_a = await invoice_pipeline.process_uploaded_pdf(
+        db_session, "a.pdf", simple_invoice_pdf() + b"A", societe_a.id
+    )
+
+    async def fake_extract_text_mode_b(text_payload):
+        return _result(invoice_number="F-EXP-2")
+
+    monkeypatch.setattr(invoice_pipeline, "extract_text_mode", fake_extract_text_mode_b)
+    result_b = await invoice_pipeline.process_uploaded_pdf(
+        db_session, "b.pdf", simple_invoice_pdf() + b"B", societe_b.id
+    )
+    assert result_a.outcome == "CREATED" and result_b.outcome == "CREATED"
+
+    content, _ = await build_export(db_session)
+    wb = _load(content)
+    societe_values = {
+        row[1] for row in wb["Factures"].iter_rows(min_row=2, values_only=True) if row[1]
+    }
+    assert societe_values == {"OMP A", "OMP B"}
+
+    content_filtered, _ = await build_export(db_session, societe_ids=[societe_a.id])
+    wb_filtered = _load(content_filtered)
+    rows = [
+        row for row in wb_filtered["Factures"].iter_rows(min_row=2, values_only=True) if row[0]
+    ]
+    assert len(rows) == 1
+    assert rows[0][1] == "OMP A"
