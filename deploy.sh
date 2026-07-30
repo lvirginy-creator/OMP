@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 BRANCH="main"
 
 echo "==> [$(date '+%Y-%m-%d %H:%M:%S')] Vérification de l'arbre de travail"
-if [ -n "$(git status --porcelain)" ]; then
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   echo "Erreur : des modifications locales non commitées existent sur le serveur." >&2
   echo "Résous-les (git stash / git checkout) avant de redéployer." >&2
   exit 1
