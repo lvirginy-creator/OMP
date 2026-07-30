@@ -1,9 +1,20 @@
 services:
-  achats:
+  inventaireomp:
     build: .
+    container_name: inventaireomp
     restart: unless-stopped
-    ports: ["8000:8000"]
+    expose:
+      - "8000"
     volumes: ["./data:/data"]
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      TOLERANCE_TOTAL: ${TOLERANCE_TOTAL:-0.02}
       TZ: Europe/Paris
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.inventaireomp.rule=Host(`omp.bricobrico.fr`)"
+      - "traefik.http.routers.inventaireomp.entrypoints=websecure"
+      - "traefik.http.routers.inventaireomp.tls=true"
+      - "traefik.http.routers.inventaireomp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.inventaireomp.loadbalancer.server.port=8000"

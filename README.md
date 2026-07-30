@@ -40,6 +40,16 @@ docker compose up --build
 
 Variable d'environnement requise : `ANTHROPIC_API_KEY` (sinon l'application fonctionne en mode saisie manuelle uniquement, cf. §5.1.f du cahier des charges).
 
+## Déploiement Traefik
+
+Le service `inventaireomp` n'expose pas de port sur l'hôte (`expose`, pas `ports`) : il doit tourner sur le même réseau Docker que Traefik pour être joignable. Le routage est piloté par labels :
+
+- Domaine : `omp.bricobrico.fr` (à adapter via le label `traefik.http.routers.inventaireomp.rule`)
+- Entrypoint : `websecure` avec TLS via le certresolver `letsencrypt`
+- Le conteneur expose son port 8000 en interne, healthcheck `/health` intégré à l'image
+
+Variables d'environnement pour la prod (`.env` à côté du `docker-compose.yml`) : `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (def. `claude-sonnet-5`), `TOLERANCE_TOTAL` (def. `0.02`).
+
 ## Avancement (plan de développement §12)
 
 - [x] Étape 1 — Socle FastAPI, SQLAlchemy, Alembic, Docker, `/health`, écran d'accueil vide
