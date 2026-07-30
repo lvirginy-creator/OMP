@@ -15,14 +15,15 @@
 } %}
 {% set charge_kinds = ["SHIPPING", "ECO_TAX", "DISCOUNT", "DEPOSIT", "OTHER"] %}
 
-<div class="grid">
-  <div>
+<div class="grid" id="facture-grid">
+  <div id="pdf-panel" style="display:none">
     <iframe src="/factures/{{ invoice.id }}/pdf" style="width:100%; height:85vh; border:1px solid var(--pico-muted-border-color);"></iframe>
   </div>
   <div>
     <h1>Facture {{ invoice.invoice_number or "(sans numéro)" }}
       {% if invoice.status == "VALIDATED" %}<span class="badge badge-validated">Validée</span>{% else %}<span class="badge badge-review">À vérifier</span>{% endif %}
     </h1>
+    <button type="button" id="toggle-pdf-btn" class="secondary outline" onclick="togglePdf()">Afficher la facture PDF</button>
 
     {% if save_error %}
     <div class="anomaly-banner"><strong>Enregistrement impossible :</strong> {{ save_error }}</div>
@@ -83,8 +84,18 @@
         <tr><th>Total TTC</th><td><input type="number" step="0.01" name="total_ttc" value="{{ invoice.total_ttc if invoice.total_ttc is not none else '' }}"></td></tr>
       </table>
 
+      <style>
+        #lines-table input[type=number]::-webkit-outer-spin-button,
+        #lines-table input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        #lines-table input[type=number] { -moz-appearance: textfield; }
+      </style>
       <h2>Lignes</h2>
       <table id="lines-table">
+        <colgroup>
+          <col style="width:11%"><col style="width:8%"><col style="width:32%">
+          <col style="width:10%"><col style="width:11%"><col style="width:11%">
+          <col style="width:13%"><col style="width:4%">
+        </colgroup>
         <thead>
           <tr>
             <th>Type</th><th>Réf. fournisseur</th><th>Libellé</th><th>Qté</th><th>PU net</th><th>Montant</th><th>Réf. interne</th><th></th>
@@ -106,11 +117,11 @@
                 {% endfor %}
               </select>
             </td>
-            <td><input type="text" name="supplier_ref" value="{{ line.supplier_ref or '' }}" size="10"></td>
-            <td><input type="text" name="supplier_label" value="{{ line.supplier_label or '' }}"></td>
-            <td><input type="number" step="0.01" name="quantity" value="{{ line.quantity if line.quantity is not none else '' }}" size="5" oninput="recalcEcart()"></td>
-            <td><input type="number" step="0.01" name="unit_price_net" value="{{ line.unit_price_net if line.unit_price_net is not none else '' }}" size="6" oninput="recalcEcart()"></td>
-            <td><input type="number" step="0.01" name="line_total_net" value="{{ line.line_total_net if line.line_total_net is not none else '' }}" size="6" oninput="recalcEcart()"></td>
+            <td><input type="text" name="supplier_ref" value="{{ line.supplier_ref or '' }}" style="width:100%"></td>
+            <td><input type="text" name="supplier_label" value="{{ line.supplier_label or '' }}" style="width:100%"></td>
+            <td><input type="number" step="0.01" name="quantity" value="{{ line.quantity if line.quantity is not none else '' }}" style="width:100%" oninput="recalcEcart()"></td>
+            <td><input type="number" step="0.01" name="unit_price_net" value="{{ line.unit_price_net if line.unit_price_net is not none else '' }}" style="width:100%" oninput="recalcEcart()"></td>
+            <td><input type="number" step="0.01" name="line_total_net" value="{{ line.line_total_net if line.line_total_net is not none else '' }}" style="width:100%" oninput="recalcEcart()"></td>
             <td>
               {% if line.line_type == "ARTICLE" %}
                 {% set our_ref = resolved_refs.get(line.id) %}
@@ -156,11 +167,11 @@
         {% for ck in charge_kinds %}<option value="{{ ck }}">{{ ck }}</option>{% endfor %}
       </select>
     </td>
-    <td><input type="text" name="supplier_ref" size="10"></td>
-    <td><input type="text" name="supplier_label"></td>
-    <td><input type="number" step="0.01" name="quantity" size="5" oninput="recalcEcart()"></td>
-    <td><input type="number" step="0.01" name="unit_price_net" size="6" oninput="recalcEcart()"></td>
-    <td><input type="number" step="0.01" name="line_total_net" size="6" oninput="recalcEcart()"></td>
+    <td><input type="text" name="supplier_ref" style="width:100%"></td>
+    <td><input type="text" name="supplier_label" style="width:100%"></td>
+    <td><input type="number" step="0.01" name="quantity" style="width:100%" oninput="recalcEcart()"></td>
+    <td><input type="number" step="0.01" name="unit_price_net" style="width:100%" oninput="recalcEcart()"></td>
+    <td><input type="number" step="0.01" name="line_total_net" style="width:100%" oninput="recalcEcart()"></td>
     <td></td>
     <td><button type="button" class="secondary" onclick="this.closest('tr').remove(); recalcEcart();">✕</button></td>
   </tr>
@@ -168,6 +179,14 @@
 
 <script>
   const TOLERANCE = {{ tolerance }};
+
+  function togglePdf() {
+    const panel = document.getElementById('pdf-panel');
+    const btn = document.getElementById('toggle-pdf-btn');
+    const hidden = panel.style.display === 'none';
+    panel.style.display = hidden ? '' : 'none';
+    btn.textContent = hidden ? 'Masquer la facture PDF' : 'Afficher la facture PDF';
+  }
 
   function toggleChargeKind(select) {
     const row = select.closest('tr');
