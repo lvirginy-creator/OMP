@@ -29,6 +29,7 @@
     <tr>
       <th>Fournisseur</th>
       <th>Référence fournisseur</th>
+      <th>Taille</th>
       <th>Libellé fournisseur</th>
       <th>Notre référence</th>
       <th>Notre libellé</th>
@@ -41,7 +42,7 @@
     {% for mapping, supplier_name in rows %}
       {% include "referentiel/_row.html" %}
     {% else %}
-      <tr><td colspan="8">Aucune correspondance enregistrée pour l'instant.</td></tr>
+      <tr><td colspan="9">Aucune correspondance enregistrée pour l'instant.</td></tr>
     {% endfor %}
   </tbody>
 </table>

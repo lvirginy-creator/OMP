@@ -13,6 +13,7 @@ class MappingRow(BaseModel):
 class MappingRowOutcome(BaseModel):
     row_number: int
     supplier_ref: str
+    size: str | None = None
     supplier_name: str | None = None
     our_ref: str | None = None
     our_label: str | None = None

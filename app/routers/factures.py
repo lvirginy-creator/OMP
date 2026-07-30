@@ -147,7 +147,7 @@ async def _detail_context(db: AsyncSession, invoice: Invoice) -> dict:
     for line in invoice.lines:
         if line.line_type != "ARTICLE":
             continue
-        mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref)
+        mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref, line.size)
         resolved_refs[line.id] = mapping.our_ref if mapping else None
 
     duplicate_candidate = None
@@ -248,6 +248,7 @@ async def save(invoice_id: int, request: Request, db: AsyncSession = Depends(get
     charge_kinds = form.getlist("charge_kind")
     supplier_refs = form.getlist("supplier_ref")
     supplier_labels = form.getlist("supplier_label")
+    sizes = form.getlist("size")
     quantities = form.getlist("quantity")
     unit_prices = form.getlist("unit_price_net")
     line_totals = form.getlist("line_total_net")
@@ -260,6 +261,7 @@ async def save(invoice_id: int, request: Request, db: AsyncSession = Depends(get
                 "charge_kind": (charge_kinds[i] or "").strip() or None,
                 "supplier_ref": (supplier_refs[i] or "").strip() or None,
                 "supplier_label": (supplier_labels[i] or "").strip(),
+                "size": (sizes[i] or "").strip() or None,
                 "quantity": _to_float(quantities[i]),
                 "unit_price_net": _to_float(unit_prices[i]),
                 "line_total_net": _to_float(line_totals[i]),

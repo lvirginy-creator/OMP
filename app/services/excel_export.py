@@ -139,9 +139,9 @@ async def build_export(
     # --- Onglet 2 : Détail achats --------------------------------------
     ws2: Worksheet = wb.create_sheet("Détail achats")
     headers2 = [
-        "Date", "Société", "Fournisseur", "Référence fournisseur", "Code barre", "Libellé fournisseur",
-        "Notre référence", "Notre libellé", "Quantité achetée", "Prix unitaire d'achat",
-        "Montant ligne", "N° facture", "Statut facture",
+        "Date", "Société", "Fournisseur", "Référence fournisseur", "Taille", "Code barre",
+        "Libellé fournisseur", "Notre référence", "Notre libellé", "Quantité achetée",
+        "Prix unitaire d'achat", "Montant ligne", "N° facture", "Statut facture",
     ]
     ws2.append(headers2)
     ws2.freeze_panes = "A2"
@@ -166,12 +166,13 @@ async def build_export(
     )
 
     for invoice, line in detail_rows:
-        mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref)
+        mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref, line.size)
         row = [
             _fr_date(invoice.invoice_date),
             societe_names.get(invoice.societe_id, ""),
             supplier_names.get(invoice.supplier_id, ""),
             line.supplier_ref or "",
+            line.size or "",
             mapping.ean if mapping and mapping.ean else "",
             line.supplier_label or "",
             mapping.our_ref if mapping else "",
@@ -185,14 +186,14 @@ async def build_export(
         ws2.append(row)
         r = ws2.max_row
         ws2.cell(r, 1).number_format = DATE_FORMAT
-        for col in (10, 11):
+        for col in (11, 12):
             ws2.cell(r, col).number_format = MONEY_FORMAT
         if mapping is None:
             for col in range(1, len(headers2) + 1):
                 ws2.cell(r, col).fill = UNMAPPED_FILL
 
-    _autosize(ws2, [12, 20, 28, 16, 16, 28, 16, 28, 12, 14, 12, 16, 12])
-    for col_idx in (9, 10, 11):
+    _autosize(ws2, [12, 20, 28, 16, 10, 16, 28, 16, 28, 12, 14, 12, 16, 12])
+    for col_idx in (10, 11, 12):
         for row_idx in range(2, ws2.max_row + 1):
             ws2.cell(row_idx, col_idx).alignment = Alignment(horizontal="right")
 

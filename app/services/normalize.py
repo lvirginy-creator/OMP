@@ -24,3 +24,9 @@ def normalize_supplier_name(name: str) -> str:
 def normalize_ref(value: str) -> str:
     """Majuscules, espaces et tirets supprimés — cohérent avec la colonne générée SQL."""
     return re.sub(r"[ \-]+", "", value or "").upper()
+
+
+def normalize_size(value: str | None) -> str | None:
+    """Majuscules, espaces superflus supprimés. None/chaîne vide -> None (pas de taille)."""
+    value = (value or "").strip().upper()
+    return value or None

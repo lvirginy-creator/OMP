@@ -8,7 +8,7 @@ from app.models.invoice import Invoice, InvoiceLine
 from app.models.mapping import Mapping
 from app.models.supplier import Supplier
 from app.services.anomalies import compute_anomalies, status_from_anomalies
-from app.services.normalize import normalize_ref
+from app.services.normalize import normalize_ref, normalize_size
 from app.services.suppliers import now_iso
 
 
@@ -19,6 +19,7 @@ class UnmappedGroup:
     supplier_ref_norm: str
     supplier_ref: str
     supplier_label: str | None
+    size: str | None = None
     line_count: int = 0
     total_qty: float = 0.0
     first_date: str | None = None
@@ -29,8 +30,10 @@ async def get_unmapped_groups(db: AsyncSession) -> list[UnmappedGroup]:
     active_mappings = (
         await db.execute(select(Mapping).where(Mapping.active.is_(True)))
     ).scalars().all()
-    specific_keys = {(m.supplier_id, m.supplier_ref_norm) for m in active_mappings if m.supplier_id}
-    global_keys = {m.supplier_ref_norm for m in active_mappings if m.supplier_id is None}
+    specific_keys = {
+        (m.supplier_id, m.supplier_ref_norm, m.size) for m in active_mappings if m.supplier_id
+    }
+    global_keys = {(m.supplier_ref_norm, m.size) for m in active_mappings if m.supplier_id is None}
 
     rows = (
         await db.execute(
@@ -40,6 +43,7 @@ async def get_unmapped_groups(db: AsyncSession) -> list[UnmappedGroup]:
                 InvoiceLine.supplier_ref,
                 InvoiceLine.supplier_ref_norm,
                 InvoiceLine.supplier_label,
+                InvoiceLine.size,
                 InvoiceLine.quantity,
                 Invoice.invoice_date,
             )
@@ -49,14 +53,24 @@ async def get_unmapped_groups(db: AsyncSession) -> list[UnmappedGroup]:
         )
     ).all()
 
-    groups: dict[tuple[int | None, str], UnmappedGroup] = {}
-    for supplier_id, supplier_name, supplier_ref, ref_norm, supplier_label, quantity, invoice_date in rows:
+    groups: dict[tuple[int | None, str, str | None], UnmappedGroup] = {}
+    for (
+        supplier_id,
+        supplier_name,
+        supplier_ref,
+        ref_norm,
+        supplier_label,
+        size,
+        quantity,
+        invoice_date,
+    ) in rows:
         if not ref_norm:
             continue
-        if (supplier_id, ref_norm) in specific_keys or ref_norm in global_keys:
+        size_norm = normalize_size(size)
+        if (supplier_id, ref_norm, size_norm) in specific_keys or (ref_norm, size_norm) in global_keys:
             continue
 
-        key = (supplier_id, ref_norm)
+        key = (supplier_id, ref_norm, size_norm)
         group = groups.get(key)
         if group is None:
             group = UnmappedGroup(
@@ -65,6 +79,7 @@ async def get_unmapped_groups(db: AsyncSession) -> list[UnmappedGroup]:
                 supplier_ref_norm=ref_norm,
                 supplier_ref=supplier_ref,
                 supplier_label=supplier_label,
+                size=size_norm,
             )
             groups[key] = group
 
@@ -79,7 +94,7 @@ async def get_unmapped_groups(db: AsyncSession) -> list[UnmappedGroup]:
             group.supplier_label = supplier_label
 
     result = list(groups.values())
-    result.sort(key=lambda g: (g.supplier_name or "", -g.total_qty))
+    result.sort(key=lambda g: (g.supplier_name or "", g.supplier_ref, g.size or "", -g.total_qty))
     return result
 
 
@@ -90,11 +105,13 @@ async def create_mapping_and_recompute(
     our_ref: str,
     our_label: str,
     ean: str | None,
+    size: str | None = None,
 ) -> Mapping:
     timestamp = now_iso()
     mapping = Mapping(
         supplier_id=supplier_id,
         supplier_ref=supplier_ref,
+        size=normalize_size(size),
         our_ref=our_ref,
         our_label=our_label,
         ean=ean or None,

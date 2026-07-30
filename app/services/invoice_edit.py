@@ -10,7 +10,7 @@ from app.models.import_log import ImportLog
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.supplier import Supplier
 from app.services.anomalies import can_validate, compute_anomalies, status_from_anomalies
-from app.services.normalize import normalize_supplier_name
+from app.services.normalize import normalize_size, normalize_supplier_name
 from app.services.suppliers import get_or_create_supplier, now_iso
 
 
@@ -61,6 +61,7 @@ async def save_invoice_edits(
                 charge_kind=line.get("charge_kind"),
                 supplier_ref=line.get("supplier_ref"),
                 supplier_label=line.get("supplier_label"),
+                size=normalize_size(line.get("size")),
                 quantity=line.get("quantity"),
                 unit_price_net=line.get("unit_price_net"),
                 line_total_net=line.get("line_total_net"),

@@ -144,7 +144,7 @@ async def test_sum_detail_plus_charges_equals_sum_total_ht(db_session, monkeypat
     wb = _load(content)
 
     detail_sum = sum(
-        row[10] for row in wb["Détail achats"].iter_rows(min_row=2, values_only=True) if row[10] is not None
+        row[11] for row in wb["Détail achats"].iter_rows(min_row=2, values_only=True) if row[11] is not None
     )
     factures_rows = list(wb["Factures"].iter_rows(min_row=2, values_only=True))
     total_row = factures_rows[-1]
@@ -186,9 +186,9 @@ async def test_mapped_reference_fills_our_ref_and_ean(db_session, monkeypatch):
     content, _ = await build_export(db_session)
     wb = _load(content)
     row = list(wb["Détail achats"].iter_rows(min_row=2, max_row=2, values_only=True))[0]
-    assert row[4] == "1234567890123"  # code barre
-    assert row[6] == "INT-EXPREF1"  # notre référence
-    assert row[7] == "Article interne export"
+    assert row[5] == "1234567890123"  # code barre
+    assert row[7] == "INT-EXPREF1"  # notre référence
+    assert row[8] == "Article interne export"
 
 
 async def test_status_filter_excludes_needs_review(db_session, monkeypatch):

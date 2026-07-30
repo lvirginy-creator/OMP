@@ -1,6 +1,7 @@
 <tr id="mapping-row-{{ mapping.id }}" {% if not mapping.active %}style="opacity:.55"{% endif %}>
   <td>{{ supplier_name or "— (global)" }}</td>
   <td>{{ mapping.supplier_ref }}</td>
+  <td>{{ mapping.size or "" }}</td>
   <td>{{ mapping.supplier_label or "" }}</td>
   <td>{{ mapping.our_ref }}</td>
   <td>{{ mapping.our_label }}</td>

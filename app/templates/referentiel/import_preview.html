@@ -14,6 +14,7 @@
       <th>Ligne</th>
       <th>Fournisseur</th>
       <th>Réf. fournisseur</th>
+      <th>Taille</th>
       <th>Action</th>
       <th>Détail</th>
     </tr>
@@ -24,6 +25,7 @@
       <td>{{ o.row_number }}</td>
       <td>{{ o.supplier_name or "— (global)" }}</td>
       <td>{{ o.supplier_ref }}</td>
+      <td>{{ o.size or "" }}</td>
       <td>
         {% if o.action == "create" %}<span class="badge badge-validated">Création</span>
         {% elif o.action == "update" %}<span class="badge badge-review">Mise à jour</span>

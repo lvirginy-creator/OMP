@@ -21,6 +21,7 @@ async def create(
     request: Request,
     supplier_id: str = Form(""),
     supplier_ref: str = Form(...),
+    size: str = Form(""),
     our_ref: str = Form(...),
     our_label: str = Form(...),
     ean: str = Form(""),
@@ -28,8 +29,8 @@ async def create(
 ):
     sid = int(supplier_id) if supplier_id.strip() else None
     await create_mapping_and_recompute(
-        db, sid, supplier_ref.strip(), our_ref.strip(), our_label.strip(), ean.strip()
+        db, sid, supplier_ref.strip(), our_ref.strip(), our_label.strip(), ean.strip(), size.strip()
     )
     return HTMLResponse(
-        '<tr><td colspan="7">✓ Référence mappée.</td></tr>'
+        '<tr><td colspan="11">✓ Référence mappée.</td></tr>'
     )

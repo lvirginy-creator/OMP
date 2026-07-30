@@ -15,6 +15,7 @@ class Mapping(Base):
         Computed("UPPER(REPLACE(REPLACE(supplier_ref, ' ', ''), '-', ''))", persisted=True),
     )
     supplier_label: Mapped[str | None] = mapped_column(Text)
+    size: Mapped[str | None] = mapped_column(String(16))
     our_ref: Mapped[str] = mapped_column(Text, nullable=False)
     our_label: Mapped[str] = mapped_column(Text, nullable=False)
     ean: Mapped[str | None] = mapped_column(String(32))
@@ -27,6 +28,7 @@ class Mapping(Base):
             "ux_mapping",
             text("IFNULL(supplier_id, -1)"),
             "supplier_ref_norm",
+            text("IFNULL(size, '')"),
             unique=True,
         ),
     )

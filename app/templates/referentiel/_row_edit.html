@@ -1,6 +1,7 @@
 <tr id="mapping-row-{{ mapping.id }}">
   <td>{{ supplier_name or "— (global)" }}</td>
   <td>{{ mapping.supplier_ref }}</td>
+  <td>{{ mapping.size or "" }}</td>
   <td>{{ mapping.supplier_label or "" }}</td>
   <td><input type="text" name="our_ref" value="{{ mapping.our_ref }}"></td>
   <td><input type="text" name="our_label" value="{{ mapping.our_label }}"></td>

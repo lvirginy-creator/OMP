@@ -18,6 +18,7 @@ _LINE_SCHEMA = {
         },
         "supplier_ref": {"type": ["string", "null"]},
         "supplier_label": {"type": "string"},
+        "size": {"type": ["string", "null"]},
         "quantity": {"type": ["number", "null"]},
         "unit_price_net": {"type": ["number", "null"]},
         "line_total_net": {"type": ["number", "null"]},
@@ -29,6 +30,7 @@ _LINE_SCHEMA = {
         "charge_kind",
         "supplier_ref",
         "supplier_label",
+        "size",
         "quantity",
         "unit_price_net",
         "line_total_net",
@@ -79,6 +81,7 @@ Règles impératives :
 - `line_type` : "ARTICLE" uniquement pour une marchandise physique achetée. Tout le reste est "CHARGE" : frais de port, participation aux frais, éco-participation/éco-contribution/DEEE, consigne/emballages consignés, remise globale de pied de facture, frais de dossier, escompte, arrondi. En cas de doute, choisis CHARGE.
 - Avoirs : si le document est un avoir, une note de crédit ou un "credit note", alors document_type = "CREDIT_NOTE" et TOUTES les quantités, line_total_net et totaux sont NÉGATIFS, quelle que soit la façon dont ils sont imprimés sur le document.
 - Une ligne de commentaire, un sous-total intermédiaire ou un rappel de commande ne sont pas des lignes : omets-les.
+- `size` : taille de l'article (ex: "XS", "S", "M", "38", "40"...), uniquement si le document la précise. Si un article/couleur est décliné en plusieurs tailles avec une quantité par taille (tableau de type Size/PCS avec une colonne par taille), crée une ligne distincte par taille : même `supplier_ref` et même `supplier_label`, `size` renseigné avec le code de la taille, `quantity` = la quantité de cette seule taille, `unit_price_net` = le prix unitaire de la ligne (identique pour toutes les tailles du même article/couleur), `line_total_net` = quantité de cette taille × prix unitaire. N'ajoute aucune ligne pour une case vide ou à 0 du tableau de tailles. Si l'article n'est pas décliné en tailles, laisse `size` à `null`.
 - total_ht, total_vat, total_ttc proviennent du pied de facture, pas d'un recalcul.
 - Si un article apparaît sur plusieurs lignes (colisage détaillé), conserve les lignes séparées telles quelles.
 - page_count_documents : nombre de factures distinctes détectées dans le document (vaut 1 dans l'immense majorité des cas)."""

@@ -76,6 +76,7 @@ Le script vérifie l'absence de modifications locales, récupère le dernier cod
 ## Extension hors cahier des charges
 
 - **Société** : liste gérée en admin (`/societes`, nom + actif/inactif), obligatoire au dépôt (une société par lot de fichiers déposés en une fois), modifiable ensuite par facture sur l'écran de vérification. Colonne ajoutée aux deux onglets de l'export Excel, filtrable au dépôt et à l'export.
+- **Taille** : quand un article est décliné en tailles sur la facture fournisseur (tableau Size/PCS), l'extraction crée une ligne par taille (même référence fournisseur, quantité et libellé propres à la taille). La taille fait partie de la clé de mapping vers la référence interne (une taille = potentiellement un SKU différent) : file « Références à mapper », référentiel et export Excel en tiennent compte.
 
 ## Statut
 

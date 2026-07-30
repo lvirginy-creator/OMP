@@ -64,6 +64,7 @@ class InvoiceLine(Base):
         Computed("UPPER(REPLACE(REPLACE(supplier_ref, ' ', ''), '-', ''))", persisted=True),
     )
     supplier_label: Mapped[str | None] = mapped_column(Text)
+    size: Mapped[str | None] = mapped_column(String(16))
     quantity: Mapped[float | None] = mapped_column(Float)
     unit_price_net: Mapped[float | None] = mapped_column(Float)
     line_total_net: Mapped[float | None] = mapped_column(Float)

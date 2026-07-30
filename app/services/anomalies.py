@@ -69,7 +69,7 @@ async def compute_anomalies(
     for line in invoice.lines:
         if line.line_type != "ARTICLE":
             continue
-        mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref)
+        mapping = await resolve_mapping(db, invoice.supplier_id, line.supplier_ref, line.size)
         if mapping is None:
             unmapped = True
             break

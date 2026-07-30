@@ -20,7 +20,7 @@ from app.services.claude_extraction import (
     is_result_unreliable,
     pick_best_result,
 )
-from app.services.normalize import normalize_supplier_name
+from app.services.normalize import normalize_size, normalize_supplier_name
 from app.services.pdf_classify import classify_pdf
 from app.services.pdf_extract_text import build_text_payload
 from app.services.pdf_render import count_pages, render_pages_as_png_base64
@@ -269,6 +269,7 @@ async def process_uploaded_pdf(
                 charge_kind=line.get("charge_kind"),
                 supplier_ref=line.get("supplier_ref"),
                 supplier_label=line.get("supplier_label"),
+                size=normalize_size(line.get("size")),
                 quantity=line.get("quantity"),
                 unit_price_net=line.get("unit_price_net"),
                 line_total_net=line.get("line_total_net"),
@@ -418,6 +419,7 @@ async def reextract_invoice(
                 charge_kind=line.get("charge_kind"),
                 supplier_ref=line.get("supplier_ref"),
                 supplier_label=line.get("supplier_label"),
+                size=normalize_size(line.get("size")),
                 quantity=line.get("quantity"),
                 unit_price_net=line.get("unit_price_net"),
                 line_total_net=line.get("line_total_net"),

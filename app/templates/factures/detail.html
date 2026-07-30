@@ -92,13 +92,13 @@
       <h2>Lignes</h2>
       <table id="lines-table">
         <colgroup>
-          <col style="width:11%"><col style="width:8%"><col style="width:32%">
-          <col style="width:10%"><col style="width:11%"><col style="width:11%">
-          <col style="width:13%"><col style="width:4%">
+          <col style="width:10%"><col style="width:8%"><col style="width:24%">
+          <col style="width:7%"><col style="width:9%"><col style="width:12%"><col style="width:10%">
+          <col style="width:16%"><col style="width:4%">
         </colgroup>
         <thead>
           <tr>
-            <th>Type</th><th>Réf. fournisseur</th><th>Libellé</th><th>Qté</th><th>PU net</th><th>Montant</th><th>Réf. interne</th><th></th>
+            <th>Type</th><th>Réf. fournisseur</th><th>Libellé</th><th>Taille</th><th>Qté</th><th>PU net</th><th>Montant</th><th>Réf. interne</th><th></th>
           </tr>
         </thead>
         <tbody id="lines-tbody">
@@ -119,6 +119,7 @@
             </td>
             <td><input type="text" name="supplier_ref" value="{{ line.supplier_ref or '' }}" style="width:100%"></td>
             <td><input type="text" name="supplier_label" value="{{ line.supplier_label or '' }}" style="width:100%"></td>
+            <td><input type="text" name="size" value="{{ line.size or '' }}" style="width:100%"></td>
             <td><input type="number" step="0.01" name="quantity" value="{{ line.quantity if line.quantity is not none else '' }}" style="width:100%" oninput="recalcEcart()"></td>
             <td><input type="number" step="0.01" name="unit_price_net" value="{{ line.unit_price_net if line.unit_price_net is not none else '' }}" style="width:100%" oninput="recalcEcart()"></td>
             <td><input type="number" step="0.01" name="line_total_net" value="{{ line.line_total_net if line.line_total_net is not none else '' }}" style="width:100%" oninput="recalcEcart()"></td>
@@ -169,6 +170,7 @@
     </td>
     <td><input type="text" name="supplier_ref" style="width:100%"></td>
     <td><input type="text" name="supplier_label" style="width:100%"></td>
+    <td><input type="text" name="size" style="width:100%"></td>
     <td><input type="number" step="0.01" name="quantity" style="width:100%" oninput="recalcEcart()"></td>
     <td><input type="number" step="0.01" name="unit_price_net" style="width:100%" oninput="recalcEcart()"></td>
     <td><input type="number" step="0.01" name="line_total_net" style="width:100%" oninput="recalcEcart()"></td>

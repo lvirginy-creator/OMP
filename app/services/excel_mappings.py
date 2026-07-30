@@ -10,11 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.mapping import Mapping
 from app.models.supplier import Supplier
 from app.schemas.mapping import MappingRowOutcome
-from app.services.normalize import normalize_ref, strip_accents
+from app.services.normalize import normalize_ref, normalize_size, strip_accents
 from app.services.suppliers import get_or_create_supplier, now_iso
 
 TEMPLATE_HEADERS = [
     ("reference_fournisseur", "reference_fournisseur"),
+    ("taille", "taille"),
     ("fournisseur", "fournisseur"),
     ("libelle_fournisseur", "libelle_fournisseur"),
     ("notre_reference", "notre_reference"),
@@ -25,6 +26,7 @@ TEMPLATE_HEADERS = [
 _HEADER_ALIASES = {
     "reference_fournisseur": "supplier_ref",
     "ref_fournisseur": "supplier_ref",
+    "taille": "size",
     "fournisseur": "supplier_name",
     "libelle_fournisseur": "supplier_label",
     "notre_reference": "our_ref",
@@ -149,10 +151,14 @@ async def build_preview(
         if supplier_name:
             supplier = await get_or_create_supplier(db, supplier_name)
 
+        size_norm = normalize_size(values.get("size"))
         ref_norm = normalize_ref(supplier_ref)
         stmt = select(Mapping).where(Mapping.supplier_ref_norm == ref_norm)
         stmt = stmt.where(Mapping.supplier_id == supplier.id) if supplier else stmt.where(
             Mapping.supplier_id.is_(None)
+        )
+        stmt = stmt.where(Mapping.size.is_(None)) if size_norm is None else stmt.where(
+            Mapping.size == size_norm
         )
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
@@ -161,6 +167,7 @@ async def build_preview(
                 MappingRowOutcome(
                     row_number=row.row_number,
                     supplier_ref=supplier_ref,
+                    size=size_norm,
                     supplier_name=supplier_name,
                     our_ref=our_ref,
                     our_label=our_label,
@@ -175,6 +182,7 @@ async def build_preview(
                 MappingRowOutcome(
                     row_number=row.row_number,
                     supplier_ref=supplier_ref,
+                    size=size_norm,
                     supplier_name=supplier_name,
                     our_ref=our_ref,
                     our_label=our_label,
@@ -205,6 +213,7 @@ async def apply_import(
         supplier_name = values.get("supplier_name", "").strip() or None
         supplier_label = values.get("supplier_label", "").strip() or None
         ean = values.get("ean", "").strip() or None
+        size_norm = normalize_size(values.get("size"))
 
         supplier: Supplier | None = None
         if supplier_name:
@@ -214,6 +223,9 @@ async def apply_import(
         stmt = select(Mapping).where(Mapping.supplier_ref_norm == ref_norm)
         stmt = stmt.where(Mapping.supplier_id == supplier.id) if supplier else stmt.where(
             Mapping.supplier_id.is_(None)
+        )
+        stmt = stmt.where(Mapping.size.is_(None)) if size_norm is None else stmt.where(
+            Mapping.size == size_norm
         )
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
@@ -231,6 +243,7 @@ async def apply_import(
                 Mapping(
                     supplier_id=supplier.id if supplier else None,
                     supplier_ref=supplier_ref,
+                    size=size_norm,
                     supplier_label=supplier_label,
                     our_ref=our_ref,
                     our_label=our_label,
@@ -261,6 +274,7 @@ async def export_mappings(db: AsyncSession) -> bytes:
         ws.append(
             [
                 mapping.supplier_ref,
+                mapping.size or "",
                 supplier_name or "",
                 mapping.supplier_label or "",
                 mapping.our_ref,
