@@ -95,7 +95,7 @@ Règles impératives :
   … et de même pour M et L.
   Si l'article n'est PAS décliné en tailles, laisse `size` à `null` et ne modifie pas `supplier_ref`/`supplier_label`.
   IMPORTANT — filet de sécurité : ce découpage par taille ne doit JAMAIS te conduire à omettre un article. Si un document comporte de nombreux articles/couleurs/tailles et que tu n'es pas certain de pouvoir transcrire chaque taille individuellement sans erreur, fais de ton mieux ligne par ligne plutôt que de renvoyer un tableau `lines` vide ou incomplet : mieux vaut une ligne agrégée par couleur (avec `size: null` et la quantité totale) qu'aucune ligne du tout. Un document avec des articles visibles doit TOUJOURS produire au moins une ligne par article/couleur.
-- total_ht, total_vat, total_ttc proviennent du pied de facture, pas d'un recalcul.
+- total_ht, total_vat, total_ttc proviennent du pied de facture, pas d'un recalcul. `total_ht` doit correspondre à la somme de TOUTES les lignes de la facture, articles ET frais/charges inclus (port, emballage...) — c'est le total général avant taxe, pas le seul sous-total marchandises. Si le pied de facture affiche un sous-total marchandises (ex: "Total") PUIS des frais ajoutés (ex: "Shipping Fee") PUIS un total général (ex: "Final Total"/"Grand Total"), c'est ce total général qu'il faut mettre dans `total_ht` (sauf s'il y a une TVA distincte, auquel cas `total_ht` = total général hors cette TVA et `total_ttc` = total général).
 - Si un article apparaît sur plusieurs lignes (colisage détaillé), conserve les lignes séparées telles quelles.
 - page_count_documents : nombre de factures distinctes détectées dans le document (vaut 1 dans l'immense majorité des cas)."""
 
@@ -131,7 +131,7 @@ async def extract_text_mode(text_payload: str) -> dict[str, Any]:
     client = _get_client()
     message = await client.messages.create(
         model=settings.anthropic_model,
-        max_tokens=8192,
+        max_tokens=16000,
         system=build_system_prompt(vision=False),
         tools=[EXTRACT_INVOICE_TOOL],
         tool_choice={"type": "tool", "name": TOOL_NAME},
@@ -158,7 +158,7 @@ async def extract_vision_mode(images_b64: list[str]) -> dict[str, Any]:
     )
     message = await client.messages.create(
         model=settings.anthropic_model,
-        max_tokens=8192,
+        max_tokens=16000,
         system=build_system_prompt(vision=True),
         tools=[EXTRACT_INVOICE_TOOL],
         tool_choice={"type": "tool", "name": TOOL_NAME},
