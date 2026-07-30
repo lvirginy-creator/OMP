@@ -81,7 +81,19 @@ Règles impératives :
 - `line_type` : "ARTICLE" uniquement pour une marchandise physique achetée. Tout le reste est "CHARGE" : frais de port, participation aux frais, éco-participation/éco-contribution/DEEE, consigne/emballages consignés, remise globale de pied de facture, frais de dossier, escompte, arrondi. En cas de doute, choisis CHARGE.
 - Avoirs : si le document est un avoir, une note de crédit ou un "credit note", alors document_type = "CREDIT_NOTE" et TOUTES les quantités, line_total_net et totaux sont NÉGATIFS, quelle que soit la façon dont ils sont imprimés sur le document.
 - Une ligne de commentaire, un sous-total intermédiaire ou un rappel de commande ne sont pas des lignes : omets-les.
-- `size` : taille de l'article (ex: "XS", "S", "M", "38", "40"...), uniquement si le document la précise. Si un article/couleur est décliné en plusieurs tailles avec une quantité par taille (tableau de type Size/PCS avec une colonne par taille), crée une ligne distincte par taille : même `supplier_ref` et même `supplier_label`, `size` renseigné avec le code de la taille, `quantity` = la quantité de cette seule taille, `unit_price_net` = le prix unitaire de la ligne (identique pour toutes les tailles du même article/couleur), `line_total_net` = quantité de cette taille × prix unitaire. N'ajoute aucune ligne pour une case vide ou à 0 du tableau de tailles. Si l'article n'est pas décliné en tailles, laisse `size` à `null`.
+- Répartition par taille (IMPORTANT, à appliquer systématiquement) : si un article/couleur est décliné en plusieurs tailles avec une quantité par taille (tableau de type "Size/PCS" avec une colonne par taille : XS, S, M, L, XL, ou des pointures), NE CRÉE JAMAIS une seule ligne agrégée pour cet article. Crée UNE LIGNE PAR TAILLE NON VIDE :
+  - `supplier_ref` = référence fournisseur de base + "/" + code de la taille.
+  - `supplier_label` = libellé fournisseur de base + "/" + code de la taille.
+  - `size` = le code de la taille seul (ex: "XS").
+  - `quantity` = la quantité de CETTE seule taille (jamais le cumul de toutes les tailles).
+  - `unit_price_net` = le prix unitaire de la ligne (identique pour toutes les tailles du même article/couleur).
+  - `line_total_net` = la quantité de cette taille × unit_price_net (jamais le sous-total de toutes les tailles réunies).
+  N'ajoute aucune ligne pour une case vide ou à 0 du tableau de tailles.
+  Exemple : une ligne de facture pour la référence "JYTZ8659(BX2159+CK2186)", couleur "Black", libellé "Removable Pads Y Back Yoga Tank Top", avec le tableau XS=2 S=2 M=2 L=2 XL=(vide) et un prix unitaire de 19,25 $, donne exactement 4 lignes extraites (aucune pour XL) :
+  {"supplier_ref": "JYTZ8659(BX2159+CK2186)/XS", "supplier_label": "Removable Pads Y Back Yoga Tank Top - Black/XS", "size": "XS", "quantity": 2, "unit_price_net": 19.25, "line_total_net": 38.5}
+  {"supplier_ref": "JYTZ8659(BX2159+CK2186)/S", "supplier_label": "Removable Pads Y Back Yoga Tank Top - Black/S", "size": "S", "quantity": 2, "unit_price_net": 19.25, "line_total_net": 38.5}
+  … et de même pour M et L. Ne renvoie jamais 8 en `quantity` avec `size: null` dans ce cas : la quantité cumulée (8) ne doit apparaître nulle part, seules les quantités par taille (2, 2, 2, 2) sont valides.
+  Si l'article n'est PAS décliné en tailles, laisse `size` à `null` et ne modifie pas `supplier_ref`/`supplier_label`.
 - total_ht, total_vat, total_ttc proviennent du pied de facture, pas d'un recalcul.
 - Si un article apparaît sur plusieurs lignes (colisage détaillé), conserve les lignes séparées telles quelles.
 - page_count_documents : nombre de factures distinctes détectées dans le document (vaut 1 dans l'immense majorité des cas)."""
