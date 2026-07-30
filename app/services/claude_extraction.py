@@ -130,7 +130,7 @@ async def extract_text_mode(text_payload: str) -> dict[str, Any]:
     client = _get_client()
     message = await client.messages.create(
         model=settings.anthropic_model,
-        max_tokens=4096,
+        max_tokens=8192,
         system=build_system_prompt(vision=False),
         tools=[EXTRACT_INVOICE_TOOL],
         tool_choice={"type": "tool", "name": TOOL_NAME},
@@ -157,7 +157,7 @@ async def extract_vision_mode(images_b64: list[str]) -> dict[str, Any]:
     )
     message = await client.messages.create(
         model=settings.anthropic_model,
-        max_tokens=4096,
+        max_tokens=8192,
         system=build_system_prompt(vision=True),
         tools=[EXTRACT_INVOICE_TOOL],
         tool_choice={"type": "tool", "name": TOOL_NAME},
