@@ -17,4 +17,6 @@ services:
       - "traefik.http.routers.inventaireomp.entrypoints=websecure"
       - "traefik.http.routers.inventaireomp.tls=true"
       - "traefik.http.routers.inventaireomp.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.inventaireomp.middlewares=inventaireomp-ipallowlist@docker"
+      - "traefik.http.middlewares.inventaireomp-ipallowlist.ipallowlist.sourcerange=${TRAEFIK_ALLOWED_IPS}"
       - "traefik.http.services.inventaireomp.loadbalancer.server.port=8000"

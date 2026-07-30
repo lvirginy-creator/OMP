@@ -48,7 +48,9 @@ Le service `inventaireomp` n'expose pas de port sur l'hôte (`expose`, pas `port
 - Entrypoint : `websecure` avec TLS via le certresolver `letsencrypt`
 - Le conteneur expose son port 8000 en interne, healthcheck `/health` intégré à l'image
 
-Variables d'environnement pour la prod (`.env` à côté du `docker-compose.yml`) : `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (def. `claude-sonnet-5`), `TOLERANCE_TOTAL` (def. `0.02`).
+Variables d'environnement pour la prod (`.env` à côté du `docker-compose.yml`) : `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (def. `claude-sonnet-5`), `TOLERANCE_TOTAL` (def. `0.02`), `TRAEFIK_ALLOWED_IPS`.
+
+L'accès est restreint par IP publique via le middleware Traefik `ipallowlist` (v3), configuré par `TRAEFIK_ALLOWED_IPS` dans le `.env` — liste de CIDR séparés par des virgules, ex. `203.0.113.10/32,198.51.100.0/24`. Toute IP hors de cette liste reçoit un 403 avant même d'atteindre l'application.
 
 ### Mise à jour du serveur
 
