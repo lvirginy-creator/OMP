@@ -50,6 +50,16 @@ Le service `inventaireomp` n'expose pas de port sur l'hôte (`expose`, pas `port
 
 Variables d'environnement pour la prod (`.env` à côté du `docker-compose.yml`) : `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (def. `claude-sonnet-5`), `TOLERANCE_TOTAL` (def. `0.02`).
 
+### Mise à jour du serveur
+
+Le code est modifié via GitHub (branche `main`). Sur le serveur, dans le dossier cloné (à côté du `.env` de prod) :
+
+```bash
+./deploy.sh
+```
+
+Le script vérifie l'absence de modifications locales, récupère le dernier code (`git merge --ff-only`), rebuild l'image et relance le conteneur (`docker compose build && docker compose up -d`), puis nettoie les images obsolètes.
+
 ## Avancement (plan de développement §12)
 
 - [x] Étape 1 — Socle FastAPI, SQLAlchemy, Alembic, Docker, `/health`, écran d'accueil vide
