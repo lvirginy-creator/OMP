@@ -143,6 +143,9 @@
     </form>
 
     <p><small>Extrait en mode {{ {"NATIVE_LLM": "texte", "VISION_LLM": "vision", "NATIVE_THEN_VISION": "texte puis vision (escalade)", "MANUAL": "saisie manuelle"}.get(invoice.extraction_method, invoice.extraction_method) }} — document classé {{ invoice.doc_class or "?" }}.</small></p>
+    {% if diagnostics.get("error") %}
+    <p><small style="color:#a33">Erreur d'extraction : {{ diagnostics.error }}</small></p>
+    {% endif %}
 
     <form method="post" action="/factures/{{ invoice.id }}/reextract" style="display:inline" onsubmit="return confirm('Cela va remplacer les lignes actuelles par une nouvelle extraction. Continuer ?');">
       <button type="submit" class="secondary">Ré-extraire</button>
